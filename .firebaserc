@@ -1,5 +1,15 @@
 {
   "projects": {
     "default": "femin9-womens-health"
-  }
+  },
+  "targets": {
+    "femin9-womens-health": {
+      "hosting": {
+        "auth": [
+          "femin9-auth"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }

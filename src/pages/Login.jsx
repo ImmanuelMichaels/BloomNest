@@ -7,7 +7,6 @@ import {
   signInWithEmailAndPassword,
   signInWithPopup,
   GoogleAuthProvider,
-  sendPasswordResetEmail,
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import './Login.css';
@@ -94,25 +93,6 @@ function ErrorBanner({ message, onDismiss }) {
   );
 }
 
-// ─── Success banner ────────────────────────────────────────────────────────────
-function SuccessBanner({ message }) {
-  if (!message) return null;
-  return (
-    <div style={{
-      padding: '12px 14px',
-      background: '#D1FAE5',
-      border: '1px solid #A7F3D0',
-      borderRadius: 10,
-      marginBottom: 16,
-      fontSize: 13,
-      color: '#065F46',
-      lineHeight: 1.5,
-    }}>
-      {message}
-    </div>
-  );
-}
-
 // ─── Lockout helpers ──────────────────────────────────────────────────────────
 function getLockoutState() {
   try {
@@ -192,12 +172,8 @@ export default function Login() {
   const [animOut,  setAnimOut]  = useState(false);
   const [focused,  setFocused]  = useState(null);
 
-  const [error,          setError]          = useState('');
-  const [successMsg,     setSuccessMsg]     = useState('');
-  const [lockoutRemaining, setLockoutRemaining] = useState(0);
-  const [showForgot,     setShowForgot]     = useState(false);
-  const [forgotEmail,    setForgotEmail]    = useState('');
-  const [forgotLoading,  setForgotLoading]  = useState(false);
+  const [error,            setError]            = useState('');
+  const [lockoutRemaining, setLockoutRemaining]  = useState(0);
 
   // ── Check lockout on mount and tick countdown ─────────────────────────────
   useEffect(() => {
@@ -258,7 +234,6 @@ export default function Login() {
   const handleLogin = async () => {
     if (!ready || loading || isLocked) return;
     setError('');
-    setSuccessMsg('');
     setLoading(true);
 
     try {
@@ -338,33 +313,6 @@ export default function Login() {
     }
   };
 
-  // ── Forgot password ───────────────────────────────────────────────────────
-  const handleForgotPassword = async () => {
-    const target = forgotEmail.trim() || email.trim();
-    if (!target) {
-      setError('Please enter your email address first.');
-      setShowForgot(false);
-      return;
-    }
-
-    setForgotLoading(true);
-    setError('');
-
-    try {
-      await sendPasswordResetEmail(auth, target);
-      setSuccessMsg(`Password reset email sent to ${target}. Check your inbox (and spam folder).`);
-      setShowForgot(false);
-      setForgotEmail('');
-    } catch (err) {
-      // Intentionally vague — don't confirm whether an email exists
-      setSuccessMsg(`If an account exists for ${target}, a reset link has been sent.`);
-      setShowForgot(false);
-      setForgotEmail('');
-    } finally {
-      setForgotLoading(false);
-    }
-  };
-
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div
@@ -401,76 +349,6 @@ export default function Login() {
         )}
 
         <ErrorBanner message={error} onDismiss={() => setError('')} />
-        <SuccessBanner message={successMsg} />
-
-        {/* Forgot password panel */}
-        {showForgot && (
-          <div style={{
-            padding: 16,
-            background: 'var(--warm)',
-            borderRadius: 10,
-            marginBottom: 16,
-            border: '1px solid var(--border)',
-          }}>
-            <p style={{ fontSize: 13, marginBottom: 10, color: 'var(--t)', fontWeight: 600 }}>
-              Reset your password
-            </p>
-            <p style={{ fontSize: 12, color: 'var(--mt)', marginBottom: 12 }}>
-              Enter your email and we'll send you a link to reset your password.
-            </p>
-            <input
-              type="email"
-              value={forgotEmail || email}
-              onChange={e => setForgotEmail(e.target.value)}
-              placeholder="your@email.com"
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                borderRadius: 8,
-                border: '1px solid var(--border)',
-                fontSize: 14,
-                marginBottom: 10,
-                boxSizing: 'border-box',
-                background: 'var(--card)',
-                color: 'var(--t)',
-              }}
-            />
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button
-                onClick={handleForgotPassword}
-                disabled={forgotLoading}
-                style={{
-                  flex: 1,
-                  padding: '10px',
-                  background: 'var(--dp)',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: 8,
-                  fontSize: 13,
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  opacity: forgotLoading ? 0.7 : 1,
-                }}
-              >
-                {forgotLoading ? 'Sending…' : 'Send Reset Link'}
-              </button>
-              <button
-                onClick={() => { setShowForgot(false); setForgotEmail(''); }}
-                style={{
-                  padding: '10px 16px',
-                  background: 'transparent',
-                  border: '1px solid var(--border)',
-                  borderRadius: 8,
-                  fontSize: 13,
-                  cursor: 'pointer',
-                  color: 'var(--mt)',
-                }}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* Email field */}
         <div className="lg-field">
@@ -516,7 +394,7 @@ export default function Login() {
           <div style={{ textAlign: 'right', marginTop: 8 }}>
             <button
               className="lg-forgot"
-              onClick={() => { setShowForgot(v => !v); setError(''); setSuccessMsg(''); }}
+              onClick={() => navigate('/forgot-password')}
             >
               Forgot password?
             </button>

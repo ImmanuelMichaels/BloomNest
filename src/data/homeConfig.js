@@ -1,20 +1,4 @@
-// data/homeConfig.js
-//
-// RULE: This file must contain NO hardcoded user data, dates, figures, or
-// mock values. Every stat, tracker value, and appointment entry that depends
-// on the user's personal data is left blank/null here; Home.jsx populates
-// them at runtime from localStorage and AppContext.
-//
-// Acceptable here: labels, icons, accent colours, layout config, static copy
-// that is generic and not derived from any individual's data.
 
-/* ─────────────────────────────────────────────────────────────────
-   JOURNEY META
-───────────────────────────────────────────────────────────────────
-   Two parallel exports for backward-compat:
-   • JOURNEY_META  — used by Home.jsx (primary, keyed to journeyType strings)
-   • Legacy JOURNEY_META in homeConfig.js (old keys) — kept for any older imports
-───────────────────────────────────────────────────────────────── */
 export const JOURNEY_META = {
   pregnant: {
     accent:     '#d63a6e',
@@ -94,11 +78,13 @@ export const PREGNANCY_CONFIG = {
     { icon: '❤️', label: 'Heart Rate',  value: null, sub: null },
     { icon: '⚖️', label: 'Weight Gain', value: null, sub: null },
     { icon: '📅', label: 'Days Left',   value: null, sub: null },
+    { icon: '⚡', label: 'Hormone',    value: null, sub: null },
   ],
 
   trackers: [
     { id: 'kicks',     icon: '👣', label: 'Kick Counter', value: null, target: null, pct: 0, color: '#d63a6e' },
     { id: 'hydration', icon: '💧', label: 'Hydration',    value: null, target: null, pct: 0, color: '#3b7de9' },
+    { id: 'hormone_symptoms', icon: '⚡', label: 'Hormone Symptoms', value: null, target: null, pct: 0, color: '#d63a6e' },
     { id: 'iron',      icon: '💊', label: 'Iron Tablet',  value: null, target: null, pct: 0, color: '#e57c1a' },
     { id: 'sleep',     icon: '😴', label: 'Sleep',        value: null, target: null, pct: 0, color: '#9a3dde' },
   ],
@@ -149,11 +135,13 @@ export const TTC_CONFIG = {
     { icon: '🥚', label: 'Ovulation',      value: null, sub: null },
     { icon: '🌡️', label: 'BBT',           value: null, sub: null },
     { icon: '💞', label: 'Fertile Window', value: null, sub: null },
+    { icon: '⚡', label: 'Hormone',       value: null, sub: null },
   ],
 
   trackers: [
     { id: 'bbt',   icon: '🌡️', label: 'BBT Logged',     value: null, target: null, pct: 0, color: '#3b7de9' },
     { id: 'cm',    icon: '💧', label: 'Cervical Mucus',  value: null, target: null, pct: 0, color: '#9a3dde' },
+    { id: 'hormone_symptoms', icon: '⚡', label: 'Hormone Symptoms', value: null, target: null, pct: 0, color: '#d63a6e' },
     { id: 'folic', icon: '💊', label: 'Folic Acid',      value: null, target: null, pct: 0, color: '#e57c1a' },
     { id: 'water', icon: '💧', label: 'Hydration',       value: null, target: null, pct: 0, color: '#2e9e67' },
   ],
@@ -203,11 +191,13 @@ export const IVF_CONFIG = {
     { icon: '📅', label: 'Transfer',   value: null, sub: null },
     { icon: '💉', label: 'Meds Today', value: null, sub: null },
     { icon: '🌸', label: 'Cycle Day',  value: null, sub: null },
+    { icon: '⚡', label: 'Hormone',    value: null, sub: null },
   ],
 
   trackers: [
     { id: 'meds',  icon: '💊', label: 'Medications', value: null, target: null, pct: 0, color: '#f08c2e' },
     { id: 'water', icon: '💧', label: 'Hydration',   value: null, target: null, pct: 0, color: '#3b7de9' },
+    { id: 'hormone_symptoms', icon: '⚡', label: 'Hormone Symptoms', value: null, target: null, pct: 0, color: '#d63a6e' },
     { id: 'sleep', icon: '😴', label: 'Sleep',       value: null, target: null, pct: 0, color: '#9a3dde' },
     { id: 'mood',  icon: '💛', label: 'Mood',        value: null, target: null, pct: 0, color: '#2e9e67' },
   ],
@@ -254,6 +244,7 @@ export const MOM_CONFIG = {
     { icon: '💤', label: 'Baby Sleep',   value: null, sub: null },
     { icon: '⚖️', label: 'Baby Weight', value: null, sub: null },
     { icon: '🌟', label: 'Milestones',   value: null, sub: null },
+    { icon: '⚡', label: 'Hormone',     value: null, sub: null },
   ],
 
   trackers: [
@@ -261,6 +252,7 @@ export const MOM_CONFIG = {
     { id: 'diaper', icon: '👶', label: 'Diapers Today', value: null, target: null, pct: 0, color: '#3b7de9' },
     { id: 'sleep',  icon: '💤', label: 'Your Sleep',    value: null, target: null, pct: 0, color: '#9a3dde' },
     { id: 'water',  icon: '💧', label: 'Hydration',     value: null, target: null, pct: 0, color: '#f08c2e' },
+    { id: 'hormone_symptoms', icon: '⚡', label: 'Hormone Symptoms', value: null, target: null, pct: 0, color: '#d63a6e' },
   ],
 
   appointments: [],
@@ -306,11 +298,13 @@ export const MENOPAUSE_CONFIG = {
     { icon: '💤',  label: 'Sleep',       value: null, sub: null },
     { icon: '😊',  label: 'Mood',        value: null, sub: null },
     { icon: '📅',  label: 'Last Period', value: null, sub: null },
+    { icon: '⚡',  label: 'Hormone',    value: null, sub: null },
   ],
 
   trackers: [
     { id: 'flash', icon: '🌡️', label: 'Hot Flashes',   value: null, target: null, pct: 0, color: '#9a3dde' },
     { id: 'sleep', icon: '💤',  label: 'Sleep Quality', value: null, target: null, pct: 0, color: '#3b7de9' },
+    { id: 'hormone_symptoms', icon: '⚡', label: 'Hormone Symptoms', value: null, target: null, pct: 0, color: '#d63a6e' },
     { id: 'water', icon: '💧',  label: 'Hydration',     value: null, target: null, pct: 0, color: '#2e9e67' },
     { id: 'move',  icon: '🧘',  label: 'Movement',      value: null, target: null, pct: 0, color: '#f08c2e' },
   ],

@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { WCard, SectionTitle } from '../../components/ui';
 import { useApp } from '../../context/useApp';
+import '../../styles/motion.css';
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 const MaleIcon = () => (
@@ -92,7 +93,7 @@ function SADecoder() {
   };
 
   return (
-    <WCard>
+    <WCard className="card-in card-in-3">
       <p style={{ fontSize: 'var(--fs-md)', fontWeight: 800, color: 'var(--dp)', marginBottom: 4 }}>
         🔬 Semen Analysis Decoder
       </p>
@@ -100,10 +101,10 @@ function SADecoder() {
         Enter values from your semen analysis report to understand what they mean. Based on WHO 2021 reference values.
       </p>
 
-      {SA_PARAMS.map(param => {
+      {SA_PARAMS.map((param, index) => {
         const result = submitted ? getResult(param, values[param.id]) : null;
         return (
-          <div key={param.id} style={{ marginBottom: 20 }}>
+          <div key={param.id} className="reveal-in" style={{ marginBottom: 20, animationDelay: `${index * 0.06}s` }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
               <label style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--t)' }}>
                 {param.label}
@@ -139,7 +140,7 @@ function SADecoder() {
               {param.tip}
             </p>
             {result && (
-              <div style={{
+              <div className="reveal-in" style={{
                 marginTop: 8,
                 padding: '10px 12px',
                 background: result.bg,
@@ -158,6 +159,7 @@ function SADecoder() {
 
       <button
         onClick={() => setSubmitted(true)}
+        className="btn-tap"
         style={{
           width: '100%',
           padding: '12px',
@@ -357,7 +359,7 @@ export default function Partner() {
     <div className="page-pad">
 
       {/* Header */}
-      <div style={{
+      <div className="card-in card-in-1" style={{
         background: 'linear-gradient(135deg, var(--lvl) 0%, var(--sgl) 100%)',
         borderRadius: 'var(--r2)',
         padding: '20px var(--card-p)',
@@ -390,7 +392,7 @@ export default function Partner() {
       </div>
 
       {/* Tab bar */}
-      <div style={{
+      <div className="card-in card-in-2" style={{
         display: 'flex',
         gap: 8,
         marginBottom: 'var(--gap-md)',
@@ -401,6 +403,7 @@ export default function Partner() {
           <button
             key={t.id}
             onClick={() => setActiveTab(t.id)}
+            className={`btn-tap choice-chip ${activeTab === t.id ? 'choice-chip--selected' : ''}`}
             style={{
               padding: '8px 16px',
               borderRadius: 20,
@@ -422,9 +425,11 @@ export default function Partner() {
       {/* ── Overview tab ─────────────────────────────────────────────────── */}
       {activeTab === 'overview' && (
         <>
-          <SectionTitle title={journeyType === 'pregnant' ? 'Partner Support Tips' : 'Key Facts'} />
+          <div className="card-in card-in-3">
+            <SectionTitle title={journeyType === 'pregnant' ? 'Partner Support Tips' : 'Key Facts'} />
+          </div>
           {content.tips.map((tip, i) => (
-            <WCard key={i} style={{ marginBottom: 'var(--gap-md)' }}>
+            <WCard key={i} className="reveal-in card-in" style={{ marginBottom: 'var(--gap-md)', animationDelay: `${i * 0.08}s` }}>
               <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
                 <div style={{
                   width: 40,
@@ -453,7 +458,7 @@ export default function Partner() {
 
           {/* Male factor stat callout — shown on TTC and IVF only */}
           {showSADecoder && (
-            <WCard style={{ background: 'var(--lvl)', border: '1px solid var(--lv)' }}>
+            <WCard className="card-in card-in-4" style={{ background: 'var(--lvl)', border: '1px solid var(--lv)' }}>
               <p style={{ fontSize: 'var(--fs-sm)', fontWeight: 800, color: 'var(--t)', marginBottom: 8 }}>
                 📊 Did you know?
               </p>
@@ -464,7 +469,7 @@ export default function Partner() {
                   'Male fertility declines from age 40 but rarely stops entirely',
                   'Most male factor causes are treatable or workable-around',
                 ].map((fact, i) => (
-                  <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                  <div key={i} className="reveal-in" style={{ display: 'flex', gap: 8, alignItems: 'flex-start', animationDelay: `${i * 0.06}s` }}>
                     <span style={{ color: 'var(--lv)', flexShrink: 0, marginTop: 2 }}>•</span>
                     <p style={{ fontSize: 'var(--fs-xs)', color: 'var(--md)', lineHeight: 1.5 }}>{fact}</p>
                   </div>
@@ -478,9 +483,11 @@ export default function Partner() {
       {/* ── SA Decoder tab ───────────────────────────────────────────────── */}
       {activeTab === 'decoder' && showSADecoder && (
         <>
-          <SectionTitle title="Understand Your Results" />
+          <div className="card-in card-in-1">
+            <SectionTitle title="Understand Your Results" />
+          </div>
           <SADecoder />
-          <WCard style={{ background: 'var(--warm)', border: '1px solid var(--border)', marginTop: 'var(--gap-md)' }}>
+          <WCard className="card-in card-in-4" style={{ background: 'var(--warm)', border: '1px solid var(--border)', marginTop: 'var(--gap-md)' }}>
             <p style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--t)', marginBottom: 8 }}>
               📋 What happens after an abnormal result?
             </p>
@@ -490,8 +497,8 @@ export default function Partner() {
                 { step: '2', text: 'Referral to a urologist or andrologist for hormonal blood tests (FSH, LH, testosterone).' },
                 { step: '3', text: 'Ultrasound to check for varicocele (enlarged testicular veins) — present in 40% of infertile men and often correctable.' },
                 { step: '4', text: 'Depending on results: lifestyle interventions, medication, IUI, IVF, or ICSI.' },
-              ].map(item => (
-                <div key={item.step} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+              ].map((item, i) => (
+                <div key={item.step} className="reveal-in" style={{ display: 'flex', gap: 10, alignItems: 'flex-start', animationDelay: `${i * 0.06}s` }}>
                   <div style={{
                     width: 22,
                     height: 22,
@@ -519,15 +526,22 @@ export default function Partner() {
       {/* ── Lifestyle tab ────────────────────────────────────────────────── */}
       {activeTab === 'lifestyle' && (
         <>
-          <SectionTitle title="Lifestyle & Sperm Health" />
-          <p style={{ fontSize: 'var(--fs-xs)', color: 'var(--mt)', marginBottom: 16, lineHeight: 1.5, padding: '0 4px' }}>
+          <div className="card-in card-in-1">
+            <SectionTitle title="Lifestyle & Sperm Health" />
+          </div>
+          <p className="card-in card-in-2" style={{ fontSize: 'var(--fs-xs)', color: 'var(--mt)', marginBottom: 16, lineHeight: 1.5, padding: '0 4px' }}>
             Sperm takes 72–74 days to mature. Changes made today affect results in 3 months.
             Tap any factor to learn more.
           </p>
           {LIFESTYLE_FACTORS.map((factor, i) => (
             <WCard
               key={i}
-              style={{ marginBottom: 'var(--gap-md)', cursor: 'pointer' }}
+              className={`card-in btn-tap ${i < 3 ? `card-in-${i + 3}` : ''}`}
+              style={{ 
+                marginBottom: 'var(--gap-md)', 
+                cursor: 'pointer',
+                transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+              }}
               onClick={() => setExpandedFactor(expandedFactor === i ? null : i)}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -561,12 +575,12 @@ export default function Partner() {
                     {factor.impact}
                   </span>
                 </div>
-                <span style={{ color: 'var(--mt)', fontSize: 18, flexShrink: 0 }}>
+                <span style={{ color: 'var(--mt)', fontSize: 18, flexShrink: 0, transition: 'transform 0.3s ease' }}>
                   {expandedFactor === i ? '▲' : '▼'}
                 </span>
               </div>
               {expandedFactor === i && (
-                <p style={{
+                <div className="reveal-in" style={{
                   marginTop: 12,
                   paddingTop: 12,
                   borderTop: '1px solid var(--border)',
@@ -575,7 +589,7 @@ export default function Partner() {
                   lineHeight: 1.6,
                 }}>
                   {factor.detail}
-                </p>
+                </div>
               )}
             </WCard>
           ))}
@@ -583,7 +597,7 @@ export default function Partner() {
       )}
 
       {/* Clinical disclaimer */}
-      <div style={{
+      <div className="card-in card-in-5" style={{
         marginTop: 8,
         padding: 14,
         background: 'var(--warm)',

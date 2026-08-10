@@ -3,9 +3,11 @@ import { AlertTriangle, ChevronRight, CheckCircle2, Circle, Plus, Trash2, PlusCi
 import { useApp } from '../../context/useApp';
 import { lsGet, lsSet, lsAppend } from '../../utils/storage';
 import CalendarStrip from '../../components/ui/CalendarStrip';
+import RangeSlider from '../../components/ui/RangeSlider';
 import GlowCard from '../../components/GlowCard';
 import EmergencyRedFlags from '../../components/EmergencyRedFlags';
 import { HOME_CONFIG, JOURNEY_META } from '../../data/homeConfig';
+import '../../styles/motion.css';
 import './Home.css';
 
 /* ─────────────────────────────────────────────────────────────────
@@ -300,7 +302,7 @@ function getCycleActionText(cycleStats) {
 ───────────────────────────────────────────────────────────────── */
 const StatCard = React.memo(({ icon, label, value, sub, accent, onClick, screenId }) => (
   <div
-    className="hm-stat-card"
+    className="hm-stat-card btn-tap"
     onClick={() => onClick && onClick(screenId)}
     style={{ cursor: onClick ? 'pointer' : 'default' }}
   >
@@ -318,7 +320,7 @@ const StatCard = React.memo(({ icon, label, value, sub, accent, onClick, screenI
 
 const CycleStatCard = React.memo(({ icon, label, value, sub, accent, onClick, screenId }) => (
   <div
-    className="hm-cycle-stat-card"
+    className="hm-cycle-stat-card btn-tap"
     onClick={() => onClick && onClick(screenId)}
     style={{ cursor: onClick ? 'pointer' : 'default' }}
   >
@@ -336,68 +338,64 @@ const CycleStatCard = React.memo(({ icon, label, value, sub, accent, onClick, sc
 const ChecklistItem = React.memo(({ id, label, done, onToggle, onDelete, accent }) => (
   <div className="hm-check-row-wrapper">
     <button
-      className="hm-check-row"
+      className="hm-check-row btn-tap"
       onClick={() => onToggle(id)}
       aria-pressed={done}
     >
       {done ? <CheckCircle2 size={20} color={accent} /> : <Circle size={20} color="#ccc" />}
       <span className={`hm-check-label ${done ? 'hm-check-label--done' : ''}`}>{label}</span>
     </button>
-    <button className="hm-check-delete" onClick={() => onDelete(id)} aria-label={`Delete task: ${label}`}>
+    <button className="hm-check-delete btn-tap" onClick={() => onDelete(id)} aria-label={`Delete task: ${label}`}>
       <Trash2 size={16} color="#999" />
     </button>
   </div>
 ));
 
 const QuickAction = React.memo(({ emoji, label, onClick }) => (
-  <button className="hm-qa-btn" onClick={onClick}>
+  <button className="hm-qa-btn btn-tap" onClick={onClick}>
     <span className="hm-qa-em">{emoji}</span>
     <span className="hm-qa-lbl">{label}</span>
   </button>
 ));
 
 function WeightUpdateModal({ isOpen, onClose, currentWeight, onSave, accent }) {
-  const [weightInput, setWeightInput] = useState(currentWeight || '');
+  const [weightValue, setWeightValue] = useState(currentWeight || 60);
 
   useEffect(() => {
-    if (isOpen) setWeightInput(currentWeight || '');
+    if (isOpen) setWeightValue(currentWeight || 60);
   }, [isOpen, currentWeight]);
 
   if (!isOpen) return null;
 
   const handleSave = () => {
-    const weightNum = parseFloat(weightInput);
-    if (!isNaN(weightNum) && weightNum > 20 && weightNum < 300) {
-      onSave(weightNum);
+    if (!isNaN(weightValue) && weightValue > 20 && weightValue < 300) {
+      onSave(weightValue);
       onClose();
     }
   };
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={e => e.stopPropagation()}>
+      <div className="modal-content reveal-in" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <h3>Update Weight</h3>
-          <button className="modal-close-btn" onClick={onClose} aria-label="Close"><X size={20} /></button>
+          <button className="modal-close-btn btn-tap" onClick={onClose} aria-label="Close"><X size={20} /></button>
         </div>
         <div className="modal-body">
-          <label htmlFor="weight-input">Current weight (kg)</label>
-          <input
-            id="weight-input"
-            type="number"
-            step="0.1"
-            min="20"
-            max="300"
-            placeholder="Enter your weight"
-            value={weightInput}
-            onChange={e => setWeightInput(e.target.value)}
-            autoFocus
-            className="weight-input"
+          <RangeSlider
+            label="Current weight (kg)"
+            value={weightValue}
+            onChange={setWeightValue}
+            min={20}
+            max={300}
+            step={0.1}
+            accent={accent}
+            formatValue={(v) => `${v.toFixed(1)} kg`}
           />
         </div>
         <div className="modal-footer">
-          <button className="modal-cancel-btn" onClick={onClose}>Cancel</button>
-          <button className="modal-save-btn" onClick={handleSave} style={{ background: accent }}>
+          <button className="modal-cancel-btn btn-tap" onClick={onClose}>Cancel</button>
+          <button className="modal-save-btn btn-tap" onClick={handleSave} style={{ background: accent }}>
             Save Weight
           </button>
         </div>
@@ -422,35 +420,51 @@ function TargetsSettingsModal({ isOpen, onClose, targets, onSave, accent }) {
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={e => e.stopPropagation()}>
+      <div className="modal-content reveal-in" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <h3>Customise Your Targets</h3>
-          <button className="modal-close-btn" onClick={onClose} aria-label="Close"><X size={20} /></button>
+          <button className="modal-close-btn btn-tap" onClick={onClose} aria-label="Close"><X size={20} /></button>
         </div>
-        <div className="modal-body">
-          <label htmlFor="target-hydration">Daily Hydration Goal (cups)</label>
-          <input id="target-hydration" type="number" value={localTargets.HYDRATION_CUPS}
-            onChange={e => setLocalTargets({ ...localTargets, HYDRATION_CUPS: parseInt(e.target.value) || 0 })}
-            min={0} max={20} />
+        <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-4)' }}>
+          <RangeSlider
+            label="Daily Hydration Goal (cups)"
+            value={localTargets.HYDRATION_CUPS}
+            onChange={(v) => setLocalTargets({ ...localTargets, HYDRATION_CUPS: v })}
+            min={0} max={20} step={1}
+            accent={accent}
+            formatValue={(v) => `${v} cups`}
+          />
 
-          <label htmlFor="target-kicks">Daily Baby Kicks Goal</label>
-          <input id="target-kicks" type="number" value={localTargets.KICKS}
-            onChange={e => setLocalTargets({ ...localTargets, KICKS: parseInt(e.target.value) || 0 })}
-            min={0} max={50} />
+          <RangeSlider
+            label="Daily Baby Kicks Goal"
+            value={localTargets.KICKS}
+            onChange={(v) => setLocalTargets({ ...localTargets, KICKS: v })}
+            min={0} max={50} step={1}
+            accent={accent}
+            formatValue={(v) => `${v}`}
+          />
 
-          <label htmlFor="target-steps">Daily Steps Goal</label>
-          <input id="target-steps" type="number" value={localTargets.STEPS}
-            onChange={e => setLocalTargets({ ...localTargets, STEPS: parseInt(e.target.value) || 0 })}
-            min={0} max={50000} step={500} />
+          <RangeSlider
+            label="Daily Steps Goal"
+            value={localTargets.STEPS}
+            onChange={(v) => setLocalTargets({ ...localTargets, STEPS: v })}
+            min={0} max={50000} step={500}
+            accent={accent}
+            formatValue={(v) => v.toLocaleString()}
+          />
 
-          <label htmlFor="target-sleep">Daily Sleep Goal (hours)</label>
-          <input id="target-sleep" type="number" step={0.5} value={localTargets.SLEEP_HOURS}
-            onChange={e => setLocalTargets({ ...localTargets, SLEEP_HOURS: parseFloat(e.target.value) || 0 })}
-            min={0} max={16} />
+          <RangeSlider
+            label="Daily Sleep Goal (hours)"
+            value={localTargets.SLEEP_HOURS}
+            onChange={(v) => setLocalTargets({ ...localTargets, SLEEP_HOURS: v })}
+            min={0} max={16} step={0.5}
+            accent={accent}
+            formatValue={(v) => `${v}h`}
+          />
         </div>
         <div className="modal-footer">
-          <button className="modal-cancel-btn" onClick={onClose}>Cancel</button>
-          <button className="modal-save-btn" onClick={handleSave} style={{ background: accent }}>
+          <button className="modal-cancel-btn btn-tap" onClick={onClose}>Cancel</button>
+          <button className="modal-save-btn btn-tap" onClick={handleSave} style={{ background: accent }}>
             Save Targets
           </button>
         </div>
@@ -523,7 +537,6 @@ export default function Home({ setTab }) {
     }
     
     if (savedDate !== today) {
-      // New day: reset done state, update date
       lsSet('checklistDate', today);
       return saved.map(t => ({ ...t, done: false }));
     }
@@ -541,7 +554,7 @@ export default function Home({ setTab }) {
       <div className="hm-root">
         <div className="hm-card" style={{ textAlign: 'center', padding: 'var(--sp-6)' }}>
           <p>Please complete onboarding</p>
-          <button onClick={() => setTab('onboarding')}>Start</button>
+          <button onClick={() => setTab('onboarding')} className="btn-tap">Start</button>
         </div>
       </div>
     );
@@ -869,18 +882,20 @@ export default function Home({ setTab }) {
           )}
         </div>
 
-        <div className="hm-section">
+        <div className="hm-section card-in card-in-1">
           <CalendarStrip accent={meta.accent} />
         </div>
 
-        <GlowCard
-          journeyType={journeyType === 'mom' ? 'postpartum' : journeyType}
-          trimester={trimester}
-          postnatalDay={babyAgeDays}
-        />
+        <div className="card-in card-in-2">
+          <GlowCard
+            journeyType={journeyType === 'mom' ? 'postpartum' : journeyType}
+            trimester={trimester}
+            postnatalDay={babyAgeDays}
+          />
+        </div>
 
         {/* HERO CARD */}
-        <div className="hm-hero-card">
+        <div className="hm-hero-card card-in card-in-3">
           <div className="hm-hero-content">
             <h2 className="hm-hero-title">
               {journeyType === 'conceive' && cycleStats
@@ -930,7 +945,7 @@ export default function Home({ setTab }) {
 
       {/* CYCLE PROGRESS BAR */}
       {journeyType === 'conceive' && cycleStats?.cycleDay && (
-        <div className="hm-card" style={{ marginTop: 'var(--sp-3)' }}>
+        <div className="hm-card reveal-in" style={{ marginTop: 'var(--sp-3)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--sp-2)' }}>
             <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--mt)' }}>Cycle Progress</span>
             <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 600, color: meta.accent }}>
@@ -959,7 +974,7 @@ export default function Home({ setTab }) {
 
       {/* DAILY CYCLE ACTION CARD */}
       {journeyType === 'conceive' && cycleStats?.cycleDay && (
-        <div className="hm-card" style={{ background: meta.accentSoft, border: `1px solid ${meta.accent}22` }}>
+        <div className="hm-card reveal-in" style={{ background: meta.accentSoft, border: `1px solid ${meta.accent}22` }}>
           <div style={{ display: 'flex', gap: 'var(--gap-md)', alignItems: 'flex-start' }}>
             <span style={{ fontSize: 28 }}>📋</span>
             <div style={{ flex: 1 }}>
@@ -978,13 +993,14 @@ export default function Home({ setTab }) {
 
       {/* EMERGENCY BANNER */}
       {hasEmergency && (
-        <div className="hm-card" style={{ background: 'var(--rdl)', border: '2px solid var(--rd)' }}>
+        <div className="hm-card reveal-in" style={{ background: 'var(--rdl)', border: '2px solid var(--rd)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--gap-md)' }}>
             <div style={{ fontSize: 32 }}>🚨</div>
             <div style={{ flex: 1 }}>
               <p style={{ fontWeight: 800, color: '#4108a5' }}>Emergency Care Needed</p>
               <button
                 onClick={() => setShowSOS(true)}
+                className="btn-tap"
                 style={{ marginTop: 8, background: '#4108a5', color: '#fff', border: 'none', borderRadius: 20, padding: '6px 16px', cursor: 'pointer' }}
               >
                 Call Emergency
@@ -996,7 +1012,7 @@ export default function Home({ setTab }) {
 
       {/* DAILY TIP */}
       {dailyTip && typeof dailyTip === 'string' && !tipDismissed && (
-        <div className="hm-card" style={{ background: meta.accentSoft, border: `1px solid ${meta.accent}22`, position: 'relative' }}>
+        <div className="hm-card reveal-in" style={{ background: meta.accentSoft, border: `1px solid ${meta.accent}22`, position: 'relative' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--gap-md)' }}>
             <span style={{ fontSize: 24, flexShrink: 0 }}>💡</span>
             <div style={{ flex: 1 }}>
@@ -1005,6 +1021,7 @@ export default function Home({ setTab }) {
             </div>
             <button
               onClick={dismissTip}
+              className="btn-tap"
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--mt)', fontSize: 18, flexShrink: 0, padding: 0, lineHeight: 1 }}
               aria-label="Dismiss tip"
             >×</button>
@@ -1014,23 +1031,31 @@ export default function Home({ setTab }) {
 
       {/* STAT CARDS */}
       <div className="hm-stats-row">
-        <StatCard icon="❤️" label="Blood Pressure"
-          value={bpSys && bpDia ? `${bpSys}/${bpDia}` : '--'} sub="mmHg"
-          accent={meta.accent} onClick={setTab} screenId="vitals" />
-        <StatCard icon="⚖️" label="Weight"
-          value={weight ? `${weight} kg` : '--'} sub="Current"
-          accent={meta.accent} onClick={() => setShowWeightModal(true)} />
-        <StatCard icon="🎯" label="Weight Goal"
-          value={weightGoals.targetWeight ? `${weightGoals.targetWeight} kg` : 'Not set'} sub="Target"
-          accent={meta.accent} onClick={setTab} screenId="body" />
-        <StatCard icon="🔥" label="Mood Streak"
-          value={moodStreak} sub="days"
-          accent={meta.accent} onClick={setTab} screenId="mental" />
+        <div className="card-in card-in-4" style={{ flex: 1 }}>
+          <StatCard icon="❤️" label="Blood Pressure"
+            value={bpSys && bpDia ? `${bpSys}/${bpDia}` : '--'} sub="mmHg"
+            accent={meta.accent} onClick={setTab} screenId="vitals" />
+        </div>
+        <div className="card-in card-in-5" style={{ flex: 1 }}>
+          <StatCard icon="⚖️" label="Weight"
+            value={weight ? `${weight} kg` : '--'} sub="Current"
+            accent={meta.accent} onClick={() => setShowWeightModal(true)} />
+        </div>
+        <div className="card-in card-in-6" style={{ flex: 1 }}>
+          <StatCard icon="🎯" label="Weight Goal"
+            value={weightGoals.targetWeight ? `${weightGoals.targetWeight} kg` : 'Not set'} sub="Target"
+            accent={meta.accent} onClick={setTab} screenId="body" />
+        </div>
+        <div className="card-in card-in-7" style={{ flex: 1 }}>
+          <StatCard icon="🔥" label="Mood Streak"
+            value={moodStreak} sub="days"
+            accent={meta.accent} onClick={setTab} screenId="mental" />
+        </div>
       </div>
 
       {/* CYCLE TRACKER CARD */}
       {journeyType === 'conceive' && cycleStats && (
-        <div className="hm-cycle-card" style={{
+        <div className="hm-cycle-card card-in card-in-8" style={{
           background: cycleStats.inFertileWindow ? meta.accentSoft : undefined,
           border: cycleStats.inFertileWindow ? `1px solid ${meta.accent}33` : undefined,
         }}>
@@ -1072,7 +1097,7 @@ export default function Home({ setTab }) {
 
       {/* JOURNEY ALERT */}
       {cfg.alert && (
-        <div className="hm-alert" style={{ background: cfg.alert.bg, borderColor: cfg.alert.color + '44' }}>
+        <div className="hm-alert reveal-in" style={{ background: cfg.alert.bg, borderColor: cfg.alert.color + '44' }}>
           <AlertTriangle size={10} color={cfg.alert.color} />
           <div>
             <p className="hm-alert-title" style={{ color: cfg.alert.color }}>{cfg.alert.title}</p>
@@ -1083,11 +1108,12 @@ export default function Home({ setTab }) {
       )}
 
       {/* MOOD CHECK-IN */}
-      <div className="hm-card">
+      <div className="hm-card card-in card-in-1">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <p className="hm-card-label">HOW ARE YOU FEELING?</p>
           <button
             onClick={() => setTab('menu')}
+            className="btn-tap"
             style={{ background: 'none', border: 'none', color: meta.accent, fontSize: 'var(--fs-xs)', cursor: 'pointer' }}
           >
             Customise moods
@@ -1097,7 +1123,7 @@ export default function Home({ setTab }) {
           {moods.map(m => (
             <button
               key={m.label}
-              className={`hm-mood-btn ${mood?.label === m.label ? 'hm-mood-btn--on' : ''}`}
+              className={`hm-mood-btn choice-chip ${mood?.label === m.label ? 'hm-mood-btn--on choice-chip--selected' : ''}`}
               style={mood?.label === m.label ? { borderColor: meta.accent, background: meta.accentSoft } : {}}
               onClick={() => handleMood(m)}
               aria-pressed={mood?.label === m.label}
@@ -1115,11 +1141,12 @@ export default function Home({ setTab }) {
       </div>
 
       {/* SYMPTOMS */}
-      <div className="hm-card">
+      <div className="hm-card card-in card-in-2">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <p className="hm-card-label">TODAY'S SYMPTOMS</p>
           <button
             onClick={() => setTab('menu')}
+            className="btn-tap"
             style={{ background: 'none', border: 'none', color: meta.accent, fontSize: 'var(--fs-xs)', cursor: 'pointer' }}
           >
             Customise
@@ -1134,6 +1161,7 @@ export default function Home({ setTab }) {
                 onClick={() => toggleSymptom(symptom)}
                 role="checkbox"
                 aria-checked={active}
+                className={`choice-chip ${active ? 'choice-chip--selected' : ''}`}
                 style={{
                   padding: '6px 14px', borderRadius: 20,
                   border: `1.5px solid ${active ? meta.accent : 'var(--border)'}`,
@@ -1157,7 +1185,7 @@ export default function Home({ setTab }) {
       </div>
 
       {/* QUICK ACTIONS */}
-      <div className="hm-card">
+      <div className="hm-card card-in card-in-3">
         <p className="hm-card-label">QUICK ACTIONS</p>
         <div className="hm-qa-grid">
           {cfg.quickActions.map(a => (
@@ -1169,11 +1197,12 @@ export default function Home({ setTab }) {
 
       {/* TRACKERS + CHECKLIST */}
       <div className="hm-two-col">
-        <div className="hm-card hm-trackers-card">
+        <div className="hm-card hm-trackers-card card-in card-in-4">
           <div className="hm-checklist-header">
             <p className="hm-card-label" style={{ margin: 0 }}>TODAY'S TRACKERS</p>
             <button
               onClick={() => setShowTargetsModal(true)}
+              className="btn-tap"
               style={{ background: 'none', border: 'none', color: meta.accent, fontSize: 'var(--fs-xs)', cursor: 'pointer' }}
             >
               Set goals
@@ -1191,11 +1220,11 @@ export default function Home({ setTab }) {
                 </div>
               </div>
               <div className="hm-tracker-actions" style={{ display: 'flex', alignItems: 'center', gap: 'var(--gap-sm)' }}>
-                <button onClick={() => updateHydration(-1)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }} aria-label="Remove one cup">
+                <button onClick={() => updateHydration(-1)} className="btn-tap" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }} aria-label="Remove one cup">
                   <MinusCircle size={20} color={meta.accent} />
                 </button>
                 <span style={{ fontWeight: 700, minWidth: 40, textAlign: 'center' }}>{hydration}</span>
-                <button onClick={() => updateHydration(1)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }} aria-label="Add one cup">
+                <button onClick={() => updateHydration(1)} className="btn-tap" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }} aria-label="Add one cup">
                   <PlusCircle size={20} color={meta.accent} />
                 </button>
                 <div className="hm-tracker-right">
@@ -1217,11 +1246,11 @@ export default function Home({ setTab }) {
                 </div>
               </div>
               <div className="hm-tracker-actions" style={{ display: 'flex', alignItems: 'center', gap: 'var(--gap-sm)' }}>
-                <button onClick={() => updateSleep(-0.5)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }} aria-label="Subtract 30 minutes">
+                <button onClick={() => updateSleep(-0.5)} className="btn-tap" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }} aria-label="Subtract 30 minutes">
                   <MinusCircle size={20} color={meta.accent} />
                 </button>
                 <span style={{ fontWeight: 700, minWidth: 40, textAlign: 'center' }}>{sleep}h</span>
-                <button onClick={() => updateSleep(0.5)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }} aria-label="Add 30 minutes">
+                <button onClick={() => updateSleep(0.5)} className="btn-tap" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }} aria-label="Add 30 minutes">
                   <PlusCircle size={20} color={meta.accent} />
                 </button>
                 <div className="hm-tracker-right">
@@ -1244,11 +1273,11 @@ export default function Home({ setTab }) {
                   </div>
                 </div>
                 <div className="hm-tracker-actions" style={{ display: 'flex', alignItems: 'center', gap: 'var(--gap-sm)' }}>
-                  <button onClick={() => updateKicks(-1)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }} aria-label="Remove one kick">
+                  <button onClick={() => updateKicks(-1)} className="btn-tap" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }} aria-label="Remove one kick">
                     <MinusCircle size={20} color={meta.accent} />
                   </button>
                   <span style={{ fontWeight: 700, minWidth: 40, textAlign: 'center' }}>{kicks}</span>
-                  <button onClick={() => updateKicks(1)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }} aria-label="Add one kick">
+                  <button onClick={() => updateKicks(1)} className="btn-tap" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }} aria-label="Add one kick">
                     <PlusCircle size={20} color={meta.accent} />
                   </button>
                   <div className="hm-tracker-right">
@@ -1271,11 +1300,11 @@ export default function Home({ setTab }) {
                 </div>
               </div>
               <div className="hm-tracker-actions" style={{ display: 'flex', alignItems: 'center', gap: 'var(--gap-sm)' }}>
-                <button onClick={() => updateSteps(-500)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }} aria-label="Subtract 500 steps">
+                <button onClick={() => updateSteps(-500)} className="btn-tap" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }} aria-label="Subtract 500 steps">
                   <MinusCircle size={20} color={meta.accent} />
                 </button>
                 <span style={{ fontWeight: 700, minWidth: 40, textAlign: 'center' }}>{steps.toLocaleString()}</span>
-                <button onClick={() => updateSteps(500)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }} aria-label="Add 500 steps">
+                <button onClick={() => updateSteps(500)} className="btn-tap" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }} aria-label="Add 500 steps">
                   <PlusCircle size={20} color={meta.accent} />
                 </button>
                 <div className="hm-tracker-right">
@@ -1301,6 +1330,7 @@ export default function Home({ setTab }) {
               <div className="hm-tracker-actions" style={{ display: 'flex', alignItems: 'center', gap: 'var(--gap-sm)' }}>
                 <button
                   onClick={() => setShowWeightModal(true)}
+                  className="btn-tap"
                   style={{ background: meta.accent, color: '#fff', border: 'none', borderRadius: 20, padding: '4px 12px', cursor: 'pointer', fontSize: 'var(--fs-2xs)' }}
                 >
                   {weight ? 'Update' : 'Add'}
@@ -1318,14 +1348,14 @@ export default function Home({ setTab }) {
         </div>
 
         {/* DAILY CHECKLIST */}
-        <div className="hm-card hm-checklist-card">
+        <div className="hm-card hm-checklist-card card-in card-in-5">
           <div className="hm-checklist-header">
             <p className="hm-card-label" style={{ margin: 0 }}>MY DAILY TASKS</p>
             <div style={{ display: 'flex', gap: 'var(--gap-sm)', alignItems: 'center', justifyContent: 'space-between' }}>
               <span className="hm-checklist-pct" style={{ color: meta.accent }}>{pct}%</span>
               <button
                 onClick={() => setShowAddTask(!showAddTask)}
-                className="hm-add-task-btn"
+                className="hm-add-task-btn btn-tap"
                 style={{ color: meta.accent }}
                 aria-label={showAddTask ? 'Hide add task form' : 'Add task'}
               >
@@ -1335,7 +1365,7 @@ export default function Home({ setTab }) {
           </div>
 
           {showAddTask && (
-            <div className="hm-add-task-form" style={{ marginBottom: 'var(--sp-3)' }}>
+            <div className="hm-add-task-form reveal-in" style={{ marginBottom: 'var(--sp-3)' }}>
               <input
                 type="text"
                 value={newTaskInput}
@@ -1348,6 +1378,7 @@ export default function Home({ setTab }) {
               />
               <button
                 onClick={addTask}
+                className="btn-tap"
                 style={{ padding: 'var(--sp-1) var(--sp-3)', background: meta.accent, color: '#fff', border: 'none', borderRadius: 'var(--r)', cursor: 'pointer' }}
               >
                 Add Task
@@ -1378,7 +1409,7 @@ export default function Home({ setTab }) {
       </div>
 
       {/* AI INSIGHT */}
-      <div className="hm-card" style={{ background: 'linear-gradient(135deg, var(--lvl), #F8F6FE)' }}>
+      <div className="hm-card card-in card-in-6" style={{ background: 'linear-gradient(135deg, var(--lvl), #F8F6FE)' }}>
         <p className="hm-card-label">✨ YOUR INSIGHT</p>
         <div style={{ display: 'flex', gap: 'var(--gap-md)', alignItems: 'flex-start' }}>
           <span style={{ fontSize: 32 }}>🤖</span>
@@ -1390,7 +1421,7 @@ export default function Home({ setTab }) {
       </div>
 
       {/* APPOINTMENTS */}
-      <div className="hm-card">
+      <div className="hm-card card-in card-in-7">
         <p className="hm-card-label">APPOINTMENTS</p>
 
         {nextAppointment && (
@@ -1439,6 +1470,7 @@ export default function Home({ setTab }) {
         {appointments.length > 2 && (
           <button
             onClick={() => setShowAllApt(!showAllApt)}
+            className="btn-tap"
             style={{ width: '100%', marginTop: 'var(--sp-2)', background: 'none', border: 'none', color: meta.accent, fontSize: 'var(--fs-sm)', cursor: 'pointer' }}
           >
             {showAllApt ? 'Show less' : `Show all ${appointments.length} appointments`}

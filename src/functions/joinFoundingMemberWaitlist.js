@@ -1,0 +1,1 @@
+exports.joinFoundingMemberWaitlist = require('./foundingMemberWaitlist').joinFoundingMemberWaitlist;

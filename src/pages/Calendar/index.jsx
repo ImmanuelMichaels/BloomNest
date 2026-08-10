@@ -13,6 +13,7 @@ import {
   getAppointmentsByDate
 } from '../../services/appointmentService';
 import { useApp } from '../../context/useApp';
+import '../../styles/motion.css';
 import './Calendar.css';
 
 // Appointment types based on user's journey - no hardcoded types, these are suggestions
@@ -238,25 +239,36 @@ export default function Calendar() {
   return (
     <div className="calendar-root">
       {/* Header */}
-      <div className="calendar-header">
+      <div className="calendar-header card-in card-in-1">
         <h2 className="calendar-title">📅 Appointments</h2>
-        <button className="calendar-add-btn" onClick={() => setShowModal(true)} disabled={syncing}>
+        <button 
+          className="calendar-add-btn btn-tap" 
+          onClick={() => setShowModal(true)} 
+          disabled={syncing}
+        >
           <Plus size={18} /> New Appointment
         </button>
       </div>
       
       {/* Upcoming Appointments Section */}
       {upcomingAppointments.length > 0 && (
-        <div className="calendar-upcoming">
+        <div className="card-in card-in-2">
           <h3 className="calendar-section-title">📋 Upcoming Appointments</h3>
           <div className="calendar-upcoming-list">
-            {upcomingAppointments.map(apt => {
+            {upcomingAppointments.map((apt, index) => {
               const aptType = appointmentTypes.find(t => t.id === apt.type) || appointmentTypes[0];
               const aptDate = new Date(apt.date);
               const isToday = apt.date === todayStr;
               
               return (
-                <div key={apt.id} className="calendar-upcoming-card" style={{ borderLeftColor: aptType?.color || '#7C5CBF' }}>
+                <div 
+                  key={apt.id} 
+                  className={`calendar-upcoming-card reveal-in`}
+                  style={{ 
+                    borderLeftColor: aptType?.color || '#7C5CBF',
+                    animationDelay: `${index * 0.05}s`
+                  }}
+                >
                   <div className="calendar-upcoming-date">
                     <span className="calendar-upcoming-day">{aptDate.getDate()}</span>
                     <span className="calendar-upcoming-month">{aptDate.toLocaleString('default', { month: 'short' })}</span>
@@ -277,10 +289,10 @@ export default function Calendar() {
                     )}
                   </div>
                   <div className="calendar-upcoming-actions">
-                    <button onClick={() => handleEdit(apt)} className="calendar-edit-btn">
+                    <button onClick={() => handleEdit(apt)} className="calendar-edit-btn btn-tap">
                       <Edit2 size={14} />
                     </button>
-                    <button onClick={() => handleDelete(apt)} className="calendar-delete-btn">
+                    <button onClick={() => handleDelete(apt)} className="calendar-delete-btn btn-tap">
                       <Trash2 size={14} />
                     </button>
                   </div>
@@ -292,15 +304,15 @@ export default function Calendar() {
       )}
       
       {/* Calendar Grid */}
-      <div className="calendar-grid-container">
+      <div className="calendar-grid-container card-in card-in-3">
         <div className="calendar-month-nav">
-          <button onClick={prevMonth} className="calendar-nav-btn">
+          <button onClick={prevMonth} className="calendar-nav-btn btn-tap">
             <ChevronLeft size={20} />
           </button>
           <h3 className="calendar-month-title">
             {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
           </h3>
-          <button onClick={nextMonth} className="calendar-nav-btn">
+          <button onClick={nextMonth} className="calendar-nav-btn btn-tap">
             <ChevronRight size={20} />
           </button>
         </div>
@@ -321,7 +333,7 @@ export default function Calendar() {
             return (
               <div
                 key={index}
-                className={`calendar-day ${!day.isCurrentMonth ? 'calendar-day-other' : ''} ${isSelected ? 'calendar-day-selected' : ''}`}
+                className={`calendar-day btn-tap ${!day.isCurrentMonth ? 'calendar-day-other' : ''} ${isSelected ? 'calendar-day-selected' : ''}`}
                 onClick={() => setSelectedDate(day.date)}
               >
                 <div className={`calendar-day-number ${isToday ? 'calendar-day-today' : ''}`}>
@@ -351,15 +363,23 @@ export default function Calendar() {
       
       {/* Selected Date Appointments */}
       {selectedDate && (
-        <div className="calendar-selected-date">
+        <div className="calendar-selected-date card-in card-in-4">
           <h3 className="calendar-section-title">
             📍 {selectedDate.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
           </h3>
           <div className="calendar-appointments-list">
-            {getAppointmentsForDate(selectedDate).map(apt => {
+            {getAppointmentsForDate(selectedDate).map((apt, index) => {
               const aptType = appointmentTypes.find(t => t.id === apt.type) || appointmentTypes[0];
               return (
-                <div key={apt.id} className="calendar-appointment-card" style={{ background: `${aptType?.color}10`, borderLeftColor: aptType?.color || '#7C5CBF' }}>
+                <div 
+                  key={apt.id} 
+                  className="calendar-appointment-card reveal-in" 
+                  style={{ 
+                    background: `${aptType?.color}10`, 
+                    borderLeftColor: aptType?.color || '#7C5CBF',
+                    animationDelay: `${index * 0.05}s`
+                  }}
+                >
                   <div className="calendar-appointment-time">
                     <Clock size={16} /> {apt.time} ({apt.duration} min)
                   </div>
@@ -389,10 +409,10 @@ export default function Calendar() {
                     )}
                   </div>
                   <div className="calendar-appointment-actions">
-                    <button onClick={() => handleEdit(apt)} className="calendar-edit-btn">
+                    <button onClick={() => handleEdit(apt)} className="calendar-edit-btn btn-tap">
                       <Edit2 size={14} />
                     </button>
-                    <button onClick={() => handleDelete(apt)} className="calendar-delete-btn">
+                    <button onClick={() => handleDelete(apt)} className="calendar-delete-btn btn-tap">
                       <Trash2 size={14} />
                     </button>
                   </div>
@@ -400,12 +420,15 @@ export default function Calendar() {
               );
             })}
             {getAppointmentsForDate(selectedDate).length === 0 && (
-              <div className="calendar-no-appointments">
+              <div className="calendar-no-appointments reveal-in">
                 <p>No appointments scheduled for this date</p>
-                <button onClick={() => {
-                  setFormData(prev => ({ ...prev, date: selectedDate.toISOString().split('T')[0] }));
-                  setShowModal(true);
-                }} className="calendar-add-small">
+                <button 
+                  onClick={() => {
+                    setFormData(prev => ({ ...prev, date: selectedDate.toISOString().split('T')[0] }));
+                    setShowModal(true);
+                  }} 
+                  className="calendar-add-small btn-tap"
+                >
                   + Add Appointment
                 </button>
               </div>
@@ -417,10 +440,10 @@ export default function Calendar() {
       {/* Add/Edit Modal */}
       {showModal && (
         <div className="calendar-modal-overlay" onClick={resetForm}>
-          <div className="calendar-modal" onClick={e => e.stopPropagation()}>
+          <div className="calendar-modal reveal-in" onClick={e => e.stopPropagation()}>
             <div className="calendar-modal-header">
               <h3>{editingAppointment ? 'Edit Appointment' : 'New Appointment'}</h3>
-              <button onClick={resetForm} className="calendar-modal-close">
+              <button onClick={resetForm} className="calendar-modal-close btn-tap">
                 <X size={20} />
               </button>
             </div>
@@ -432,6 +455,7 @@ export default function Calendar() {
                   value={formData.type}
                   onChange={e => setFormData({ ...formData, type: e.target.value })}
                   required
+                  className="choice-chip"
                 >
                   <option value="">Select type...</option>
                   {appointmentTypes.map(type => (
@@ -474,6 +498,7 @@ export default function Calendar() {
                   <select
                     value={formData.duration}
                     onChange={e => setFormData({ ...formData, duration: parseInt(e.target.value) })}
+                    className="choice-chip"
                   >
                     <option value={15}>15 min</option>
                     <option value={30}>30 min</option>
@@ -528,12 +553,12 @@ export default function Calendar() {
             </div>
             
             <div className="calendar-modal-footer">
-              <button onClick={resetForm} className="calendar-cancel-btn">
+              <button onClick={resetForm} className="calendar-cancel-btn btn-tap">
                 Cancel
               </button>
               <button 
                 onClick={handleSubmit} 
-                className="calendar-save-btn"
+                className="calendar-save-btn btn-tap"
                 disabled={syncing || !formData.type || !formData.date || !formData.time}
               >
                 {syncing ? <Loader2 size={16} className="calendar-spinner" /> : (editingAppointment ? 'Update' : 'Save')}
@@ -545,7 +570,7 @@ export default function Calendar() {
       
       {/* Sync indicator */}
       {syncing && (
-        <div className="calendar-syncing">
+        <div className="calendar-syncing reveal-in">
           <Loader2 size={16} className="calendar-spinner" />
           <span>Saving...</span>
         </div>

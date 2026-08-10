@@ -2,7 +2,9 @@ import { useState, useEffect, useRef } from 'react';
 import { SectionTitle } from '../../components/ui';
 import { useApp } from '../../context/useApp';
 import { lsGet, lsSet } from '../../utils/storage';
+import RangeSlider from '../../components/ui/RangeSlider';
 import './Nursing.css';
+import '../../styles/motion.css';
 
 /* ── Helpers ── */
 const fmt = s => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
@@ -65,18 +67,18 @@ const predictNextSleep = (sleepLog, babyWeeks) => {
       confidence: 'low'
     };
   }
-  
+
   const avgSleepDuration = sleepLog.slice(0, 5).reduce((sum, s) => sum + s.duration, 0) / Math.min(sleepLog.length, 5);
   const avgMinutes = Math.round(avgSleepDuration / 60);
-  
+
   let wakeWindow;
   if (babyWeeks < 4) wakeWindow = '45–60 min';
   else if (babyWeeks < 8) wakeWindow = '60–90 min';
   else if (babyWeeks < 16) wakeWindow = '75–105 min';
   else wakeWindow = '90–120 min';
-  
+
   const nextSleepIn = avgMinutes > 45 ? '20–30 min' : '30–45 min';
-  
+
   return {
     nextSleepWindow: `Based on ${Math.min(sleepLog.length, 5)} sessions, baby typically sleeps ${avgMinutes} minutes. Next sleep likely in ${nextSleepIn}.`,
     recommendedWakeWindow: wakeWindow,
@@ -94,6 +96,11 @@ export default function Nursing() {
   const [feedSecs, setFeedSecs]     = useState(0);
   const [feedLog, setFeedLog]       = useState(() => lsGet('nursingFeedLog', []));
   const feedRef = useRef(null);
+
+  // Editable goal band — replaces the static "Aim: 10–20 min" line.
+  // Two thumbs = a filled band; drag either end and the exact minute floats above it.
+  const [feedGoal, setFeedGoal] = useState(() => lsGet('nursingFeedGoal', [10, 20]));
+  useEffect(() => { lsSet('nursingFeedGoal', feedGoal); }, [feedGoal]);
 
   useEffect(() => {
     if (feedActive) {
@@ -119,6 +126,8 @@ export default function Nursing() {
   const lastFeed    = feedLog[0];
   const todayFeeds  = feedLog.filter(f => new Date(f.id).toDateString() === new Date().toDateString()).length;
   const nextSide    = lastFeed?.side === 'left' ? 'RIGHT' : 'LEFT';
+  const feedMins    = feedSecs / 60;
+  const withinGoal  = feedMins >= feedGoal[0] && feedMins <= feedGoal[1];
 
   /* ── Pump timer ── */
   const [pumpActive, setPumpActive] = useState(false);
@@ -199,16 +208,15 @@ export default function Nursing() {
 
   /* ── Baby Weight Tracker ── */
   const [babyWeight, setBabyWeight] = useState(() => lsGet('babyWeightLog', []));
-  const [weightInput, setWeightInput] = useState('');
+  const [weightValue, setWeightValue] = useState(3.5); // slider-driven, replaces raw text input
   const [weightUnit, setWeightUnit] = useState('kg');
 
+  // Slider range flexes with unit so kg and lb both feel natural to drag.
+  const weightRange = weightUnit === 'kg' ? { min: 1.5, max: 8, step: 0.05 } : { min: 3, max: 18, step: 0.1 };
+
   const addWeight = () => {
-    if (!weightInput) return;
-    const weightNum = parseFloat(weightInput);
-    if (isNaN(weightNum)) return;
-    
     const entry = {
-      weight: weightNum,
+      weight: weightValue,
       unit: weightUnit,
       date: new Date().toISOString(),
       ageDays: babyAgeDays,
@@ -217,7 +225,12 @@ export default function Nursing() {
     const updated = [entry, ...babyWeight].slice(0, 20);
     setBabyWeight(updated);
     lsSet('babyWeightLog', updated);
-    setWeightInput('');
+  };
+
+  const switchUnit = (unit) => {
+    if (unit === weightUnit) return;
+    setWeightValue(v => Number((unit === 'lb' ? v * 2.20462 : v / 2.20462).toFixed(2)));
+    setWeightUnit(unit);
   };
 
   const getWeightPercentile = (weight, unit) => {
@@ -266,9 +279,9 @@ export default function Nursing() {
       <SectionTitle title="Nursing Centre" subtitle={`Week ${babyWeeks} postpartum`} />
 
       {/* ── FEEDING TIMER ── */}
-      <div className='feeding-card'>
+      <div className="feeding-card card-in card-in-1">
         <p style={{ fontSize: 'var(--fs-lg)', fontWeight: 800, color: 'var(--dp)', marginBottom: 'var(--sp-3)' }}>
-          Feeding Timer 🍼 
+          Feeding Timer 🍼
         </p>
 
         {feedActive ? (
@@ -276,11 +289,17 @@ export default function Nursing() {
             <p style={{ fontSize: 'var(--fs-xs)', color: 'var(--mt)', fontWeight: 600, marginBottom: 4 }}>
               {feedSide.toUpperCase()} BREAST · FEEDING
             </p>
-            <p style={{ fontSize: 'clamp(40px,10vw,56px)', fontWeight: 900, color: 'var(--t)', lineHeight: 1 }}>
-              {fmt(feedSecs)}
-            </p>
+            <div className="timer-pulse-wrap">
+              <span
+                className="timer-pulse-ring"
+                style={{ '--pulse-color': withinGoal ? 'var(--sg)' : 'var(--t)' }}
+              />
+              <p style={{ fontSize: 'clamp(40px,10vw,56px)', fontWeight: 900, color: withinGoal ? 'var(--sg)' : 'var(--t)', lineHeight: 1 }}>
+                {fmt(feedSecs)}
+              </p>
+            </div>
             <p style={{ fontSize: 'var(--fs-xs)', color: 'var(--mt)', marginTop: 4 }}>
-              Aim: 10–20 min per side
+              {withinGoal ? '✅ Within your goal window' : `Goal: ${feedGoal[0]}–${feedGoal[1]} min`}
             </p>
           </div>
         ) : (
@@ -288,6 +307,7 @@ export default function Nursing() {
             {['left', 'right'].map(side => (
               <button
                 key={side}
+                className="btn-tap"
                 onClick={() => startFeed(side)}
                 style={{
                   flex: 1, padding: 'var(--sp-3)',
@@ -305,6 +325,7 @@ export default function Nursing() {
 
         {feedActive && (
           <button
+            className="btn-tap"
             onClick={stopFeed}
             style={{ width: '100%', padding: 'var(--sp-3)', background: 'var(--warm)', border: '1px solid var(--border)', borderRadius: 'var(--r)', fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: 'pointer' }}
           >
@@ -325,6 +346,20 @@ export default function Nursing() {
           ))}
         </div>
 
+        {/* Editable feed-goal band — drag either end, exact minute floats above it while dragging */}
+        <div style={{ marginTop: 'var(--sp-3)', borderTop: '1px solid var(--border)', paddingTop: 'var(--sp-2)' }}>
+          <RangeSlider
+            label="Feed goal per side"
+            value={feedGoal}
+            onChange={setFeedGoal}
+            min={5}
+            max={30}
+            step={1}
+            unit=" min"
+            accent="var(--t)"
+          />
+        </div>
+
         {feedLog.length > 0 && (
           <div style={{ marginTop: 'var(--sp-3)' }}>
             <p style={{ fontSize: '14px', fontWeight: 700, color: 'var(--mt)', marginBottom: 'var(--sp-2)' }}>RECENT FEEDS</p>
@@ -339,81 +374,82 @@ export default function Nursing() {
       </div>
 
       {/* ── BABY WEIGHT TRACKER ── */}
-      <div className='weight-card' style={{ display: 'flex', flexDirection: 'column', background: 'linear-gradient(135deg, #E8F5E9, #F1F8E9)', border: '1px solid #A5D6A744' }}>
-        <p style={{ fontSize: 'var(--fs-lg)', fontWeight: 800, color: '#2E7D32', marginBottom: 'var(--sp-3)' }}>
-          Baby Weight Tracker ⚖️ 
+      <div className="weight-card card-in card-in-2" style={{ display: 'flex', flexDirection: 'column', background: 'linear-gradient(135deg, #E8F5E9, #F1F8E9)', border: '1px solid #A5D6A744' }}>
+        <p style={{ fontSize: 'var(--fs-lg)', fontWeight: 800, color: '#2E7D32', marginBottom: 'var(--sp-2)' }}>
+          Baby Weight Tracker ⚖️
         </p>
-        
-        <div style={{ marginBottom: 'var(--sp-3)' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--gap-sm)', marginBottom: 'var(--sp-2)', flexWrap: 'wrap' }}>
-            <input
-              type="number"
-              step="0.01"
-              placeholder={`Weight in ${weightUnit}`}
-              value={weightInput}
-              onChange={(e) => setWeightInput(e.target.value)}
-              style={{
-                flex: 2,
-                padding: 'var(--sp-2) var(--sp-3)',
-                border: '1px solid var(--border)',
-                borderRadius: 'var(--r)',
-                fontSize: 'var(--fs-sm)',
-                minHeight: 'var(--touch)',
-              }}
-            />
-            <select
-              value={weightUnit}
-              onChange={(e) => setWeightUnit(e.target.value)}
-              style={{
-                padding: 'var(--sp-2) var(--sp-3)',
-                border: '1px solid var(--border)',
-                borderRadius: 'var(--r)',
-                fontSize: 'var(--fs-sm)',
-                background: 'white',
-              }}
-            >
-              <option value="kg">kg</option>
-              <option value="lb">lb</option>
-            </select>
+
+        <div style={{ display: 'flex', gap: 8, marginBottom: 'var(--sp-2)' }}>
+          {['kg', 'lb'].map(u => (
             <button
-              onClick={addWeight}
+              key={u}
+              className="btn-tap"
+              onClick={() => switchUnit(u)}
               style={{
-                padding: 'var(--sp-2) var(--sp-4)',
-                background: '#2E7D32',
-                color: 'white',
-                border: 'none',
-                borderRadius: 'var(--r)',
-                fontWeight: 700,
-                cursor: 'pointer',
-                minHeight: 'var(--touch)',
+                padding: '4px 14px', borderRadius: 20, cursor: 'pointer',
+                border: `1.5px solid ${weightUnit === u ? '#2E7D32' : 'var(--border)'}`,
+                background: weightUnit === u ? '#2E7D32' : 'transparent',
+                color: weightUnit === u ? '#fff' : 'var(--mt)',
+                fontSize: 'var(--fs-xs)', fontWeight: 700,
               }}
             >
-              Log Weight
+              {u}
             </button>
-          </div>
-          
-          {babyWeight.length > 0 && (
-            <div>
-              <p style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: '#2E7D32', marginBottom: 'var(--sp-2)' }}>
-                RECENT WEIGHTS {babyWeight[0] && `(Most recent: ${babyWeight[0].weight} ${babyWeight[0].unit})`}
-              </p>
-              <div style={{ maxHeight: 200, overflowY: 'auto' }}>
-                {babyWeight.slice(0, 6).map(w => {
-                  const percentile = getWeightPercentile(w.weight, w.unit);
-                  return (
-                    <div key={w.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid var(--border)', fontSize: 'var(--fs-xs)' }}>
-                      <span style={{ color: 'var(--dp)', fontWeight: 600 }}>{w.weight} {w.unit}</span>
-                      <span style={{ color: 'var(--mt)' }}>{new Date(w.date).toLocaleDateString()}</span>
-                      {percentile && <span style={{ fontSize: 'var(--fs-2xs)', color: '#2E7D32' }}>{percentile.substring(0, 30)}</span>}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+          ))}
         </div>
-        
-        <div style={{ background: 'rgba(255,255,255,0.7)', borderRadius: 'var(--r)', padding: 'var(--sp-2)' }}>
+
+        {/* Drag to the exact weight — the value floats above the thumb as you move it */}
+        <RangeSlider
+          label="Today's weight"
+          value={weightValue}
+          onChange={setWeightValue}
+          min={weightRange.min}
+          max={weightRange.max}
+          step={weightRange.step}
+          unit={` ${weightUnit}`}
+          formatValue={v => v.toFixed(2)}
+          accent="#2E7D32"
+        />
+
+        <button
+          className="btn-tap"
+          onClick={addWeight}
+          style={{
+            padding: 'var(--sp-2) var(--sp-4)',
+            background: '#2E7D32',
+            color: 'white',
+            border: 'none',
+            borderRadius: 'var(--r)',
+            fontWeight: 700,
+            cursor: 'pointer',
+            minHeight: 'var(--touch)',
+            marginTop: 'var(--sp-2)',
+          }}
+        >
+          Log {weightValue.toFixed(2)} {weightUnit}
+        </button>
+
+        {babyWeight.length > 0 && (
+          <div style={{ marginTop: 'var(--sp-3)' }}>
+            <p style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: '#2E7D32', marginBottom: 'var(--sp-2)' }}>
+              RECENT WEIGHTS {babyWeight[0] && `(Most recent: ${babyWeight[0].weight} ${babyWeight[0].unit})`}
+            </p>
+            <div style={{ maxHeight: 200, overflowY: 'auto' }}>
+              {babyWeight.slice(0, 6).map(w => {
+                const percentile = getWeightPercentile(w.weight, w.unit);
+                return (
+                  <div key={w.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid var(--border)', fontSize: 'var(--fs-xs)' }}>
+                    <span style={{ color: 'var(--dp)', fontWeight: 600 }}>{w.weight} {w.unit}</span>
+                    <span style={{ color: 'var(--mt)' }}>{new Date(w.date).toLocaleDateString()}</span>
+                    {percentile && <span style={{ fontSize: 'var(--fs-2xs)', color: '#2E7D32' }}>{percentile.substring(0, 30)}</span>}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        <div style={{ background: 'rgba(255,255,255,0.7)', borderRadius: 'var(--r)', padding: 'var(--sp-2)', marginTop: 'var(--sp-2)' }}>
           <p style={{ fontSize: '13px', color: '#555', lineHeight: 1.5 }}>
             💡 Newborns typically regain birth weight by day 10-14, then gain 150-200g (5-7oz) per week in first 3 months.
           </p>
@@ -421,11 +457,11 @@ export default function Nursing() {
       </div>
 
       {/* ── IMMUNISATION TRACKER ── */}
-      <div className='immunisation-card' style={{ background: 'linear-gradient(135deg, #E3F2FD, #E8EAF6)', border: '1px solid #90CAF944' }}>
+      <div className="immunisation-card card-in card-in-3" style={{ background: 'linear-gradient(135deg, #E3F2FD, #E8EAF6)', border: '1px solid #90CAF944' }}>
         <p style={{ fontSize: 'var(--fs-lg)', fontWeight: 800, color: '#1565C0', marginBottom: 'var(--sp-3)' }}>
           Immunisation Schedule 💉
         </p>
-        
+
         {showImmunisationInput ? (
           <div>
             <div style={{ marginBottom: 'var(--sp-2)' }}>
@@ -462,6 +498,7 @@ export default function Nursing() {
               />
             </div>
             <button
+              className="btn-tap"
               onClick={saveImmunisation}
               style={{
                 width: '100%',
@@ -482,10 +519,10 @@ export default function Nursing() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--sp-2)', flexWrap: 'wrap', gap: 'var(--gap-sm)', flexDirection: 'column' }}>
               <div>
                 {daysUntilVaccine !== null && (
-                  <div>
+                  <div className="reveal-in">
                     <p style={{ fontSize: '13px', fontWeight: 700, color: daysUntilVaccine <= 7 ? '#D32F2F' : daysUntilVaccine <= 14 ? '#F57C00' : '#1565C0' }}>
-                      {daysUntilVaccine <= 0 
-                        ? '📅 Immunisation due or overdue — contact your GP' 
+                      {daysUntilVaccine <= 0
+                        ? '📅 Immunisation due or overdue — contact your GP'
                         : `📅 Next immunisation in ${daysUntilVaccine} day${daysUntilVaccine !== 1 ? 's' : ''}`
                       }
                     </p>
@@ -496,6 +533,7 @@ export default function Nursing() {
                 )}
               </div>
               <button
+                className="btn-tap"
                 onClick={() => setShowImmunisationInput(true)}
                 style={{
                   padding: 'var(--sp-1) var(--sp-3)',
@@ -511,13 +549,13 @@ export default function Nursing() {
               </button>
             </div>
             {immunisationNotes && (
-              <div style={{ background: 'rgba(255,255,255,0.7)', borderRadius: 'var(--r)', padding: 'var(--sp-2)', marginTop: 'var(--sp-2)' }}>
+              <div className="reveal-in" style={{ background: 'rgba(255,255,255,0.7)', borderRadius: 'var(--r)', padding: 'var(--sp-2)', marginTop: 'var(--sp-2)' }}>
                 <p style={{ fontSize: '13px', color: '#555' }}>📝 {immunisationNotes}</p>
               </div>
             )}
           </div>
         )}
-        
+
         <div style={{ marginTop: 'var(--sp-3)', background: 'rgba(255,255,255,0.5)', borderRadius: 'var(--r)', padding: 'var(--sp-2)' }}>
           <p style={{ fontSize: '13px', color: '#555', lineHeight: 1.5 }}>
             🗓️ Typical schedule: 8 weeks (6-in-1, MenB, Rotavirus), 12 weeks (6-in-1 #2, Pneumococcal), 16 weeks (6-in-1 #3, MenB #2).
@@ -526,23 +564,27 @@ export default function Nursing() {
       </div>
 
       {/* ── BREAST PUMP TIMER ── */}
-      <div className='feeding-card' style={{ background: 'linear-gradient(135deg, var(--lvl), #F8F6FE)', border: '1px solid var(--lvm)33' }}>
+      <div className="feeding-card card-in card-in-4" style={{ background: 'linear-gradient(135deg, var(--lvl), #F8F6FE)', border: '1px solid var(--lvm)33' }}>
         <p style={{ fontSize: 'var(--fs-lg)', fontWeight: 800, color: 'var(--lv)', marginBottom: 'var(--sp-3)' }}>
-         Breast Pump Timer  🫙 
+         Breast Pump Timer  🫙
         </p>
 
         {pumpActive ? (
           <div style={{ textAlign: 'center', marginBottom: 'var(--sp-4)' }}>
             <p style={{ fontSize: 'var(--fs-xs)', color: 'var(--lv)', fontWeight: 700, marginBottom: 4 }}>PUMPING IN PROGRESS</p>
-            <p style={{ fontSize: 'clamp(40px,10vw,56px)', fontWeight: 900, color: 'var(--lv)', lineHeight: 1 }}>
-              {fmt(pumpSecs)}
-            </p>
+            <div className="timer-pulse-wrap">
+              <span className="timer-pulse-ring" style={{ '--pulse-color': 'var(--lv)' }} />
+              <p style={{ fontSize: 'clamp(40px,10vw,56px)', fontWeight: 900, color: 'var(--lv)', lineHeight: 1 }}>
+                {fmt(pumpSecs)}
+              </p>
+            </div>
             <p style={{ fontSize: '13px', color: 'var(--mt)', marginTop: 4 }}>
               Recommended: 15–20 min per session
             </p>
           </div>
         ) : (
           <button
+            className="btn-tap"
             onClick={() => { setPumpActive(true); setPumpSecs(0); }}
             style={{ width: '100%', padding: 'var(--sp-3)', background: 'var(--lv)', color: '#fff', border: 'none', borderRadius: 'var(--r)', fontSize: 'var(--fs-md)', fontWeight: 800, cursor: 'pointer', marginBottom: 'var(--sp-3)' }}
           >
@@ -552,6 +594,7 @@ export default function Nursing() {
 
         {pumpActive && (
           <button
+            className="btn-tap"
             onClick={stopPump}
             style={{ width: '100%', padding: 'var(--sp-3)', background: 'var(--warm)', border: '1px solid var(--border)', borderRadius: 'var(--r)', fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: 'pointer', marginBottom: 'var(--sp-3)' }}
           >
@@ -584,7 +627,7 @@ export default function Nursing() {
       </div>
 
       {/* ── POOP SCANNER ── */}
-      <div className='poop-card' style={{ background: 'linear-gradient(135deg, #FFF3E0, #FFF8E1)', border: '1px solid #FFCC8033' }}>
+      <div className="poop-card card-in card-in-5" style={{ background: 'linear-gradient(135deg, #FFF3E0, #FFF8E1)', border: '1px solid #FFCC8033' }}>
         <p style={{ fontSize: 'var(--fs-lg)', fontWeight: 800, color: 'var(--dp)', marginBottom: 4 }}>
           💩 Poop Colour Scanner
         </p>
@@ -596,6 +639,7 @@ export default function Nursing() {
           {POOP_COLORS.map(c => (
             <button
               key={c.id}
+              className={`choice-chip ${poopSelected?.id === c.id ? 'choice-chip--selected' : ''}`}
               onClick={() => setPoopSelected(c)}
               style={{
                 padding: 'var(--sp-2) var(--sp-3)',
@@ -614,7 +658,7 @@ export default function Nursing() {
         </div>
 
         {poopSelected && (
-          <div style={{
+          <div className="reveal-in" style={{
             borderRadius: 'var(--r)', padding: 'var(--sp-3)',
             background: poopSelected.status === 'urgent' ? 'var(--rdl)' : poopSelected.status === 'watch' ? 'var(--gdl)' : 'var(--sgl)',
             border: `1px solid ${poopSelected.status === 'urgent' ? 'var(--rd)' : poopSelected.status === 'watch' ? 'var(--gd)' : 'var(--sg)'}44`,
@@ -628,6 +672,7 @@ export default function Nursing() {
         )}
 
         <button
+          className="btn-tap"
           onClick={logPoop}
           disabled={!poopSelected}
           style={{ width: '100%', padding: 'var(--sp-2)', background: poopSelected ? 'var(--dp)' : '#898682', color: '#fff', border: 'none', borderRadius: 'var(--r)', cursor: poopSelected ? 'pointer' : 'default', fontWeight: 700 }}
@@ -637,7 +682,7 @@ export default function Nursing() {
       </div>
 
       {/* ── SLEEP PATTERN TRACKER + AI PREDICTOR ── */}
-      <div className='sleep-card' style={{ background: 'linear-gradient(135deg,#EEF2FF,#F8F6FE)', border: '1px solid #C7D2FE44' }}>
+      <div className="sleep-card card-in card-in-6" style={{ background: 'linear-gradient(135deg,#EEF2FF,#F8F6FE)', border: '1px solid #C7D2FE44' }}>
         <p style={{ fontSize: 'var(--fs-lg)', fontWeight: 800, color: '#4338CA', marginBottom: 'var(--sp-3)' }}>
           😴 Sleep Pattern Tracker
         </p>
@@ -645,12 +690,16 @@ export default function Nursing() {
         {sleepActive ? (
           <div style={{ textAlign: 'center', marginBottom: 'var(--sp-4)' }}>
             <p style={{ fontSize: 'var(--fs-xs)', color: '#4338CA', fontWeight: 700, marginBottom: 4 }}>BABY SLEEPING NOW</p>
-            <p style={{ fontSize: 'clamp(40px,10vw,56px)', fontWeight: 900, color: '#4338CA', lineHeight: 1 }}>
-              {fmt(sleepSecs)}
-            </p>
+            <div className="timer-pulse-wrap">
+              <span className="timer-pulse-ring" style={{ '--pulse-color': '#4338CA' }} />
+              <p style={{ fontSize: 'clamp(40px,10vw,56px)', fontWeight: 900, color: '#4338CA', lineHeight: 1 }}>
+                {fmt(sleepSecs)}
+              </p>
+            </div>
           </div>
         ) : (
           <button
+            className="btn-tap"
             onClick={startSleep}
             style={{ width: '100%', padding: 'var(--sp-3)', background: '#4338CA', color: '#fff', border: 'none', borderRadius: 'var(--r)', fontSize: 'var(--fs-md)', fontWeight: 800, cursor: 'pointer', marginBottom: 'var(--sp-3)' }}
           >
@@ -660,6 +709,7 @@ export default function Nursing() {
 
         {sleepActive && (
           <button
+            className="btn-tap"
             onClick={stopSleep}
             style={{ width: '100%', padding: 'var(--sp-3)', background: 'var(--warm)', border: '1px solid var(--border)', borderRadius: 'var(--r)', fontSize: 'var(--fs-sm)', fontWeight: 700, cursor: 'pointer', marginBottom: 'var(--sp-3)' }}
           >
@@ -693,12 +743,12 @@ export default function Nursing() {
         )}
 
         {/* AI Sleep Predictor Section */}
-        <div style={{ 
-          background: sleepPrediction.confidence === 'high' ? 'linear-gradient(135deg, #4338CA, #6366F1)' : 
-                     sleepPrediction.confidence === 'medium' ? 'linear-gradient(135deg, #6366F1, #818CF8)' : 
+        <div style={{
+          background: sleepPrediction.confidence === 'high' ? 'linear-gradient(135deg, #4338CA, #6366F1)' :
+                     sleepPrediction.confidence === 'medium' ? 'linear-gradient(135deg, #6366F1, #818CF8)' :
                      'linear-gradient(135deg, #818CF8, #A5B4FC)',
-          borderRadius: 'var(--r)', 
-          padding: 'var(--sp-3)', 
+          borderRadius: 'var(--r)',
+          padding: 'var(--sp-3)',
           marginBottom: 'var(--sp-3)',
           color: 'white'
         }}>
@@ -724,7 +774,7 @@ export default function Nursing() {
         </div>
       </div>
 
-      <div className='outfit-card' style={{ background: '#fff', border: '1px solid var(--sg)33' }}>
+      <div className="outfit-card card-in card-in-7" style={{ background: '#fff', border: '1px solid var(--sg)33' }}>
         <p style={{ fontSize: 'var(--fs-lg)', fontWeight: 800, color: 'var(--dp)', marginBottom: 4 }}>
           👗 Nursing Style Guide
         </p>
@@ -736,6 +786,7 @@ export default function Nursing() {
           {OUTFITS.map((o, i) => (
             <button
               key={i}
+              className="btn-tap"
               onClick={() => setOutfitTab(i)}
               style={{
                 flexShrink: 0,
@@ -756,7 +807,7 @@ export default function Nursing() {
         {(() => {
           const o = OUTFITS[outfitTab];
           return (
-            <div>
+            <div className="tab-panel" key={outfitTab}>
               <div style={{ marginBottom: 'var(--sp-3)' }}>
                 {o.items.map((item, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: i < o.items.length - 1 ? '1px solid var(--border)' : 'none' }}>
@@ -781,8 +832,7 @@ export default function Nursing() {
         </div>
       </div>
 
-      
-      <div className='self-care-card' style={{ background: 'linear-gradient(135deg, var(--rdl), #FFF0F5)', border: '1px solid var(--rd)22' }}>
+      <div className="self-care-card card-in card-in-8" style={{ background: 'linear-gradient(135deg, var(--rdl), #FFF0F5)', border: '1px solid var(--rd)22' }}>
         <p style={{ fontSize: 'var(--fs-lg)', fontWeight: 800, color: 'var(--t)', marginBottom: 'var(--sp-3)' }}>
           💗 Don't Forget You
         </p>

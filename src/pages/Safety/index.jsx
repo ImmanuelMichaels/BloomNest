@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { WCard, Tag } from '../../components/ui';
 import DrugSafetyChecker from '../../components/cards/DrugSafetyChecker';
 import { useApp } from '../../context/useApp';
+import '../../styles/motion.css';
 
 const HUB_TABS = [
   { id:"dv",     label:"🆘 DV Help" },
@@ -212,6 +213,14 @@ export default function Safety() {
   const [checklistItems, setChecklistItems] = useState(CRISIS_ACTION_CHECKLIST);
   const [crisisPlan, setCrisisPlan] = useState("");
   
+  // Load saved crisis plan on mount
+  useEffect(() => {
+    const savedPlan = localStorage.getItem('crisisPlan');
+    if (savedPlan) {
+      setCrisisPlan(savedPlan);
+    }
+  }, []);
+  
   // Quick emergency action
   const handleEmergencyCall = (number) => {
     window.location.href = `tel:${number.replace(/\s/g, "")}`;
@@ -250,14 +259,6 @@ export default function Safety() {
       alert("Your crisis plan has been saved! You can access it anytime.");
     }
   };
-  
-  // Load saved crisis plan on mount
-  useState(() => {
-    const savedPlan = localStorage.getItem('crisisPlan');
-    if (savedPlan) {
-      setCrisisPlan(savedPlan);
-    }
-  }, []);
   
   // Get journey-specific resources
   const getJourneyResources = () => {
@@ -303,7 +304,7 @@ export default function Safety() {
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       {/* Emergency SOS Banner - Always visible */}
-      <div style={{ 
+      <div className="card-in card-in-1" style={{ 
         padding: "var(--pad-y) var(--pad-x) 0",
         marginBottom: "var(--sp-2)"
       }}>
@@ -319,6 +320,7 @@ export default function Safety() {
           </div>
           <button
             onClick={handleSOS}
+            className="btn-tap"
             style={{
               background: "var(--rd)",
               color: "#fff",
@@ -331,7 +333,8 @@ export default function Safety() {
               display: "flex",
               alignItems: "center",
               gap: 6,
-              animation: "pulse 2s infinite"
+              animation: "pulse 2s infinite",
+              boxShadow: '0 0 20px rgba(239, 68, 68, 0.3)'
             }}
           >
             🚨 SOS
@@ -339,7 +342,7 @@ export default function Safety() {
         </div>
         
         {/* Quick Emergency Numbers Banner */}
-        <div style={{ 
+        <div className="reveal-in" style={{ 
           background: "var(--rdl)", 
           borderRadius: "var(--r)", 
           padding: "var(--sp-2) var(--sp-3)",
@@ -356,18 +359,21 @@ export default function Safety() {
           <div style={{ display: "flex", gap: "var(--gap-sm)", flexWrap: "wrap" }}>
             <button 
               onClick={() => handleEmergencyCall("999")}
+              className="btn-tap"
               style={{ background: "var(--rd)", color: "#fff", border: "none", borderRadius: 20, padding: "4px 12px", fontSize: "var(--fs-xs)", fontWeight: 700, cursor: "pointer" }}
             >
               999 (Emergency)
             </button>
             <button 
               onClick={() => handleEmergencyCall("111")}
+              className="btn-tap"
               style={{ background: "var(--bll)", border: "none", borderRadius: 20, padding: "4px 12px", fontSize: "var(--fs-xs)", fontWeight: 700, cursor: "pointer", color: "var(--bl)" }}
             >
               111 (NHS)
             </button>
             <button 
               onClick={() => handleEmergencyCall("116123")}
+              className="btn-tap"
               style={{ background: "var(--gdl)", border: "none", borderRadius: 20, padding: "4px 12px", fontSize: "var(--fs-xs)", fontWeight: 700, cursor: "pointer", color: "var(--gd)" }}
             >
               116 123 (Samaritans)
@@ -377,11 +383,12 @@ export default function Safety() {
       </div>
       
       {/* Tab Navigation */}
-      <div style={{ display: "flex", overflowX: "auto", gap: 8, padding: "var(--sp-3) var(--pad-x)", scrollbarWidth: "none" }}>
-        {HUB_TABS.map(t => (
+      <div className="card-in card-in-2" style={{ display: "flex", overflowX: "auto", gap: 8, padding: "var(--sp-3) var(--pad-x)", scrollbarWidth: "none" }}>
+        {HUB_TABS.map((t, index) => (
           <button 
             key={t.id} 
             onClick={() => setTab(t.id)} 
+            className={`btn-tap choice-chip ${tab === t.id ? 'choice-chip--selected' : ''}`}
             style={{ 
               padding: "8px 14px", 
               borderRadius: 22, 
@@ -392,7 +399,8 @@ export default function Safety() {
               color: tab === t.id ? "#fff" : "var(--mt)", 
               border: `1.5px solid ${tab === t.id ? "var(--dp)" : "var(--border)"}`, 
               cursor: "pointer", 
-              minHeight: "var(--touch)" 
+              minHeight: "var(--touch)",
+              transition: 'all 0.2s ease'
             }}
           >
             {t.label}
@@ -405,7 +413,7 @@ export default function Safety() {
         
         {/* Journey-specific emergency resources */}
         {journeyResources && (
-          <WCard style={{ background: "var(--lvl)", border: "1.5px solid var(--lvm)44", marginBottom: "var(--gap-md)" }}>
+          <WCard className="card-in card-in-3" style={{ background: "var(--lvl)", border: "1.5px solid var(--lvm)44", marginBottom: "var(--gap-md)" }}>
             <div style={{ fontWeight: 800, fontSize: "var(--fs-sm)", color: "var(--lv)", marginBottom: 8 }}>
               🤰 {journeyResources.title}
             </div>
@@ -420,12 +428,12 @@ export default function Safety() {
         {/* DV Help Tab - UK Data */}
         {tab === "dv" && (
           <div style={{ display: "flex", flexDirection: "column", gap: "var(--gap-md)" }}>
-            <WCard style={{ background: "var(--rdl)", border: "1.5px solid var(--rdm)33" }}>
+            <WCard className="card-in card-in-4" style={{ background: "var(--rdl)", border: "1.5px solid var(--rdm)33" }}>
               <div style={{ fontWeight: 800, fontSize: "var(--fs-md)", color: "var(--rd)", marginBottom: 6 }}>🆘 You Are Not Alone</div>
               <div style={{ fontSize: "var(--fs-sm)", color: "var(--md)", lineHeight: 1.6 }}>Domestic abuse affects 1 in 4 women and 1 in 6 men in the UK. Free, confidential help is available 24/7 through national and local services.</div>
             </WCard>
             
-            <WCard style={{ background: "var(--bll)" }}>
+            <WCard className="card-in card-in-5" style={{ background: "var(--bll)" }}>
               <div style={{ fontWeight: 700, fontSize: "var(--fs-sm)", marginBottom: 8 }}>📋 Safety Planning Tips (UK)</div>
               <ul style={{ fontSize: "var(--fs-sm)", color: "var(--md)", lineHeight: 1.6, margin: 0, paddingLeft: 20 }}>
                 <li>Have a code word with trusted friends/family to signal danger</li>
@@ -438,12 +446,12 @@ export default function Safety() {
             </WCard>
             
             {DV_CONTACTS_UK.map((c, i) => (
-              <WCard key={i}>
+              <WCard key={i} className="reveal-in card-in" style={{ animationDelay: `${i * 0.06}s` }}>
                 <div style={{ fontWeight: 700, fontSize: "var(--fs-sm)", marginBottom: 8 }}>{c.flag} {c.country}</div>
                 {c.lines.map((l, j) => (
                   <div key={j} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: j < c.lines.length - 1 ? "1px solid var(--border)" : "none" }}>
                     <div style={{ fontSize: "var(--fs-sm)", color: "var(--md)" }}>{l.name}</div>
-                    <a href={`tel:${l.num.replace(/\s/g,"")}`} style={{ fontSize: "var(--fs-xs)", fontWeight: 800, color: "var(--rd)", background: "var(--rdl)", padding: "5px 10px", borderRadius: 12, textDecoration: "none" }}>{l.num}</a>
+                    <a href={`tel:${l.num.replace(/\s/g,"")}`} className="btn-tap" style={{ fontSize: "var(--fs-xs)", fontWeight: 800, color: "var(--rd)", background: "var(--rdl)", padding: "5px 10px", borderRadius: 12, textDecoration: "none" }}>{l.num}</a>
                   </div>
                 ))}
               </WCard>
@@ -451,6 +459,7 @@ export default function Safety() {
             
             <button 
               onClick={() => window.location.href = "https://www.bbc.co.uk/news"}
+              className="btn-tap"
               style={{
                 width: "100%",
                 padding: "var(--sp-3)",
@@ -471,7 +480,7 @@ export default function Safety() {
         {tab === "sexual" && (
           <div style={{ display: "flex", flexDirection: "column", gap: "var(--gap-md)" }}>
             {SEXUAL_HEALTH_UK.map((s, i) => (
-              <WCard key={i} style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
+              <WCard key={i} className="reveal-in card-in" style={{ animationDelay: `${i * 0.06}s`, display: "flex", gap: 14, alignItems: "flex-start" }}>
                 <div style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, background: "var(--bll)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>{s.icon}</div>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
@@ -483,10 +492,10 @@ export default function Safety() {
               </WCard>
             ))}
             
-            <WCard>
+            <WCard className="card-in card-in-6">
               <div style={{ fontWeight: 700, marginBottom: 8 }}>🩺 STI Testing Reminder (UK)</div>
               <p style={{ fontSize: "var(--fs-sm)", color: "var(--mt)", marginBottom: 12 }}>NHS recommends annual STI testing if you have new or multiple partners. Testing is free and confidential.</p>
-              <button style={{ background: "var(--t)", color: "#fff", border: "none", borderRadius: 20, padding: "8px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+              <button className="btn-tap" style={{ background: "var(--t)", color: "#fff", border: "none", borderRadius: 20, padding: "8px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
                 <span>📅</span> Set NHS Testing Reminder
               </button>
             </WCard>
@@ -496,12 +505,12 @@ export default function Safety() {
         {/* Report Incident Tab - UK Data */}
         {tab === "report" && (
           <div style={{ display: "flex", flexDirection: "column", gap: "var(--gap-md)" }}>
-            <WCard style={{ background: "var(--gdl)" }}>
+            <WCard className="card-in card-in-4" style={{ background: "var(--gdl)" }}>
               <div style={{ fontWeight: 700, fontSize: "var(--fs-sm)", color: "var(--gd)", marginBottom: 4 }}>📋 6-Step Incident Guide (UK)</div>
               <div style={{ fontSize: "var(--fs-sm)", color: "var(--md)" }}>Follow these steps to report domestic abuse safely and effectively in the UK.</div>
             </WCard>
             {REPORT_STEPS_UK.map((s, i) => (
-              <WCard key={i} style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
+              <WCard key={i} className="reveal-in card-in" style={{ animationDelay: `${i * 0.06}s`, display: "flex", gap: 14, alignItems: "flex-start" }}>
                 <div style={{ width: 32, height: 32, borderRadius: "50%", flexShrink: 0, background: "var(--t)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "var(--fs-sm)", fontWeight: 800, color: "#fff" }}>{s.n}</div>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: "var(--fs-sm)", marginBottom: 4 }}>{s.title}</div>
@@ -515,12 +524,12 @@ export default function Safety() {
         {/* Free Clinics Tab - UK Data */}
         {tab === "condoms" && (
           <div style={{ display: "flex", flexDirection: "column", gap: "var(--gap-md)" }}>
-            <WCard style={{ background: "var(--sgl)" }}>
+            <WCard className="card-in card-in-4" style={{ background: "var(--sgl)" }}>
               <div style={{ fontWeight: 700, fontSize: "var(--fs-sm)", color: "var(--sg)", marginBottom: 4 }}>🩹 Free NHS & Low-Cost Care</div>
               <div style={{ fontSize: "var(--fs-sm)", color: "var(--md)" }}>Free condoms, STI testing, contraception, and sexual health services available across the UK.</div>
             </WCard>
             {FREE_CLINICS_UK.map((c, i) => (
-              <WCard key={i}>
+              <WCard key={i} className="reveal-in card-in" style={{ animationDelay: `${i * 0.06}s` }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
                   <div style={{ fontWeight: 700, fontSize: "var(--fs-sm)" }}>{c.flag} {c.name}</div>
                   <Tag label={c.area} bg="var(--sgl)" tc="var(--sg)" />
@@ -532,12 +541,12 @@ export default function Safety() {
         )}
 
         {/* Drug Safety Tab */}
-        {tab === "drugs" && <DrugSafetyChecker />}
+        {tab === "drugs" && <div className="card-in card-in-1"><DrugSafetyChecker /></div>}
         
         {/* Crisis Tab - Mental Health Crisis Support */}
         {tab === "crisis" && (
           <div style={{ display: "flex", flexDirection: "column", gap: "var(--gap-md)" }}>
-            <WCard style={{ background: "var(--rdl)", border: "2px solid var(--rd)" }}>
+            <WCard className="card-in card-in-4" style={{ background: "var(--rdl)", border: "2px solid var(--rd)" }}>
               <div style={{ fontWeight: 800, fontSize: "var(--fs-md)", color: "var(--rd)", marginBottom: 8 }}>
                 🚨 Mental Health Crisis Support (UK)
               </div>
@@ -550,6 +559,7 @@ export default function Safety() {
             {/* Button to show crisis checklist */}
             <button
               onClick={() => setShowCrisisChecklist(true)}
+              className="btn-tap card-in card-in-5"
               style={{
                 background: "var(--t)",
                 color: "#fff",
@@ -570,7 +580,7 @@ export default function Safety() {
             
             {/* Crisis Helplines - UK */}
             {EMERGENCY_CONTACTS.map((contact, i) => (
-              <WCard key={i}>
+              <WCard key={i} className="reveal-in card-in" style={{ animationDelay: `${i * 0.04}s` }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
                   <div>
                     <div style={{ fontWeight: 700, fontSize: "var(--fs-sm)" }}>{contact.name}</div>
@@ -578,6 +588,7 @@ export default function Safety() {
                   </div>
                   <button 
                     onClick={() => handleEmergencyCall(contact.number)}
+                    className="btn-tap"
                     style={{
                       background: contact.bg,
                       color: contact.color,
@@ -596,7 +607,7 @@ export default function Safety() {
             ))}
             
             {/* Additional UK Mental Health Resources */}
-            <WCard>
+            <WCard className="card-in card-in-6">
               <div style={{ fontWeight: 700, marginBottom: 8 }}>📞 Other UK Mental Health Helplines</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 <div><strong>CALM (Campaign Against Living Miserably):</strong> 0800 58 58 58 (5pm-midnight)</div>
@@ -607,13 +618,14 @@ export default function Safety() {
             </WCard>
             
             {/* Warning Signs Checklist - Clickable */}
-            <WCard>
+            <WCard className="card-in card-in-7">
               <div style={{ fontWeight: 700, fontSize: "var(--fs-md)", marginBottom: 8 }}>⚠️ Crisis Warning Signs</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 {CRISIS_WARNING_SIGNS.map((item) => (
                   <div 
                     key={item.id} 
                     onClick={() => handleCrisisSignClick(item)}
+                    className="btn-tap"
                     style={{ 
                       padding: "var(--sp-2) 0", 
                       borderBottom: `1px solid var(--border)`,
@@ -621,6 +633,7 @@ export default function Safety() {
                       transition: "all 0.2s",
                       background: selectedCrisis?.id === item.id ? "var(--warm)" : "transparent",
                       borderRadius: "var(--r)",
+                      paddingLeft: selectedCrisis?.id === item.id ? "var(--sp-2)" : 0
                     }}
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
@@ -640,7 +653,7 @@ export default function Safety() {
             </WCard>
             
             {/* Personal Crisis Plan */}
-            <WCard style={{ background: "var(--lvl)" }}>
+            <WCard className="card-in card-in-8" style={{ background: "var(--lvl)" }}>
               <div style={{ fontWeight: 700, fontSize: "var(--fs-sm)", color: "var(--lv)", marginBottom: 8 }}>📝 My Personal Crisis Plan</div>
               <textarea
                 value={crisisPlan}
@@ -660,6 +673,7 @@ export default function Safety() {
               />
               <button
                 onClick={saveCrisisPlan}
+                className="btn-tap"
                 style={{
                   background: "var(--t)",
                   color: "#fff",
@@ -675,7 +689,7 @@ export default function Safety() {
             </WCard>
             
             {/* Self-Care Tips */}
-            <WCard style={{ background: "var(--lvl)" }}>
+            <WCard className="card-in card-in-8" style={{ background: "var(--lvl)" }}>
               <div style={{ fontWeight: 700, fontSize: "var(--fs-sm)", color: "var(--lv)", marginBottom: 8 }}>💚 Immediate Self-Care</div>
               <ul style={{ fontSize: "var(--fs-sm)", color: "var(--md)", lineHeight: 1.6, margin: 0, paddingLeft: 20 }}>
                 <li>Breathe deeply: Inhale for 4 seconds, hold for 7, exhale for 8</li>
@@ -691,13 +705,14 @@ export default function Safety() {
       
       {/* Crisis Checklist Modal - Using showCrisisChecklist and selectedCrisis */}
       {showCrisisChecklist && (
-        <div style={{
+        <div className="reveal-in" style={{
           position: "fixed",
           top: 0,
           left: 0,
           right: 0,
           bottom: 0,
-          background: "rgba(0,0,0,0.9)",
+          background: "rgba(0,0,0,0.85)",
+          backdropFilter: "blur(8px)",
           zIndex: 2000,
           display: "flex",
           alignItems: "center",
@@ -720,6 +735,7 @@ export default function Safety() {
               </h3>
               <button
                 onClick={closeCrisisModal}
+                className="btn-tap"
                 style={{
                   background: "var(--warm)",
                   border: "none",
@@ -738,7 +754,7 @@ export default function Safety() {
             </div>
             
             {selectedCrisis && (
-              <div style={{ 
+              <div className="reveal-in" style={{ 
                 background: "var(--rdl)", 
                 padding: "var(--sp-3)", 
                 borderRadius: "var(--r)", 
@@ -774,7 +790,7 @@ export default function Safety() {
                   width: `${progressPercentage}%`,
                   height: "100%",
                   background: "var(--sg)",
-                  transition: "width 0.3s"
+                  transition: "width 0.3s ease"
                 }} />
               </div>
               
@@ -782,6 +798,7 @@ export default function Safety() {
                 <div 
                   key={item.id}
                   onClick={() => toggleChecklistItem(item.id)}
+                  className="btn-tap"
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -791,7 +808,7 @@ export default function Safety() {
                     background: item.completed ? "var(--sgl)" : "transparent",
                     borderRadius: "var(--r)",
                     cursor: "pointer",
-                    transition: "all 0.2s"
+                    transition: "all 0.2s ease"
                   }}
                 >
                   <div style={{
@@ -816,6 +833,7 @@ export default function Safety() {
             
             <button
               onClick={closeCrisisModal}
+              className="btn-tap"
               style={{
                 width: "100%",
                 padding: "var(--sp-3)",
@@ -836,8 +854,8 @@ export default function Safety() {
       
       <style>{`
         @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.7; }
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.85; transform: scale(1.02); }
         }
       `}</style>
     </div>

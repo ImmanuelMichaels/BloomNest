@@ -13,8 +13,10 @@ import VerifyEmail from './pages/VerifyEmail';
 import JourneySelect from './pages/Journeyselect';
 import AppShell from './pages/AppShell';
 import PrivacyPolicy from './pages/PrivacyPolicy';
-import { AppProvider } from './context/AppContext';
-import { useApp } from './context/useApp';
+import FoundingMemberReservation from './pages/FoundingMemberReservation';
+import MembershipConfirmation from './pages/MembershipConfirmation';
+import { AppProvider, useApp } from './context/AppContext';
+import ForgotPassword from './pages/ForgotPassword';
 
 // ─── Splash ───────────────────────────────────────────────────────────────────
 function SplashRoute() {
@@ -115,17 +117,20 @@ export default function App() {
   return (
     <AppProvider>
       <Routes>
-        <Route path="/"               element={<SplashRoute />} />
-        <Route path="/onboarding"     element={<Onboarding />} />
-        <Route path="/consent"        element={<Consent />} />
-        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-        <Route path="/signup"         element={<Signup />} />
-        <Route path="/verify-email"   element={<VerifyEmail />} />
-        <Route path="/login"          element={<Login />} />
-        <Route path="/journey-select" element={<JourneySelect />} />
+        <Route path="/"                      element={<SplashRoute />} />
+        <Route path="/onboarding"            element={<Onboarding />} />
+        <Route path="/consent"               element={<Consent />} />
+        <Route path="/privacy-policy"        element={<PrivacyPolicy />} />
+        <Route path="/signup"                element={<Signup />} />
+        <Route path="/verify-email"          element={<VerifyEmail />} />
+        <Route path="/login"                 element={<Login />} />
+        <Route path="/journey-select"        element={<JourneySelect />} />
+        <Route path="/founding-member"       element={<FoundingMemberReservation />} />
+        <Route path="/membership-confirmation" element={<MembershipConfirmation />} />
 
         <Route path="/app/:journey"   element={<ProtectedApp />} />
         <Route path="/app"            element={<AppRedirect />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="*"              element={<Navigate to="/" replace />} />
       </Routes>
     </AppProvider>

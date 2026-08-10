@@ -1,12 +1,16 @@
+// src/pages/Health.jsx
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { WCard, SectionTitle, Tag, IconBox } from '../../components/ui';
 import SymptomRisk from '../../components/cards/SymptomRisk';
 import EmergencyRedFlags from '../../components/EmergencyRedFlags';
 import HealthInsightPanel from '../../components/cards/HealthInsightPanel';
+import RangeSlider from '../../components/ui/RangeSlider';
 import { DRUGS, DRUG_DB, getDrugByName, TRADITIONAL } from '../../data/drugs';
 import { useApp } from '../../context/useApp';
 import { useHealthData } from '../../hooks/useHealthData';
 import { lsGet, lsSet } from '../../utils/storage';
+import { getTraditionalPractices as getFoodTraditionalPractices } from '../../data/foods/resolver';
+import '../../styles/motion.css';
 
 // ─── Journey-aware scan tool descriptions ────────────────────────────────────
 
@@ -23,9 +27,9 @@ const SCAN_TOOLS_BY_JOURNEY = {
   ],
   menopause: [
     { icon: '🔬', bg: 'var(--sgl)', tc: 'var(--sg)', title: 'Medication Checker',   desc: 'Check HRT, supplements, or any medication for interactions and safety',  type: 'drug'     },
-    { icon: '👁️', bg: 'var(--lvl)', tc: 'var(--lv)', title: 'Skin & Symptom Check', desc: 'AI-powered visual assessment for skin changes and visible symptoms',     type: 'symptom'  },
+    { icon: '👁️', bg: 'var(--lvl)', tc: 'var(--lv)', title: 'Skin & Symptom Check', desc: 'AI-powered visual check for skin changes and visible symptoms',     type: 'symptom'  },
   ],
-  ttc: [
+  conceive: [
     { icon: '🔬', bg: 'var(--sgl)', tc: 'var(--sg)', title: 'Drug Safety Check',    desc: 'Check medication and supplement safety when trying to conceive',         type: 'drug'     },
     { icon: '👁️', bg: 'var(--lvl)', tc: 'var(--lv)', title: 'Symptom Vision',       desc: 'AI-powered visual check for skin or visible physical symptoms',          type: 'symptom'  },
   ],
@@ -45,7 +49,7 @@ const DEFAULT_SCAN_TOOLS = SCAN_TOOLS_BY_JOURNEY.menstrual;
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function Health() {
-  const { journeyType, getCurrentWeek } = useApp();
+  const { journeyType, getCurrentWeek, foodDbReady, foodDbReport } = useApp();
 
   const {
     todayEntry, recentEntries, heatmapData,
@@ -63,6 +67,14 @@ export default function Health() {
   const [searchHistory, setSearchHistory] = useState(() => 
     lsGet('drugSearchHistory', [])
   );
+  const [showFoodPractices, setShowFoodPractices] = useState(false);
+  const [foodTraditionalPractices, setFoodTraditionalPractices] = useState([]);
+  
+  // ── Weight tracking with slider ──
+  const [weightValue, setWeightValue] = useState(() => {
+    const history = lsGet('vitalsHistory', []);
+    return history[0]?.weight || 60;
+  });
 
   const streamRef = useRef(null);
   const intRef    = useRef(null);
@@ -79,6 +91,20 @@ export default function Health() {
   // Scan tools for this journey
   const scanTools = SCAN_TOOLS_BY_JOURNEY[journeyType] || DEFAULT_SCAN_TOOLS;
 
+  // ─── Load food-based traditional practices when food DB is ready ──────────
+  useEffect(() => {
+    if (foodDbReady && journeyType) {
+      try {
+        const practices = getFoodTraditionalPractices(journeyType);
+        if (practices && practices.length > 0) {
+          setFoodTraditionalPractices(practices);
+        }
+      } catch (error) {
+        console.warn('Failed to load food traditional practices:', error);
+      }
+    }
+  }, [foodDbReady, journeyType]);
+
   const stopCam = useCallback(() => {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((t) => t.stop());
@@ -94,6 +120,19 @@ export default function Health() {
   useEffect(() => {
     lsSet('drugSearchHistory', searchHistory.slice(0, 10));
   }, [searchHistory]);
+
+  // Save weight when changed
+  useEffect(() => {
+    const today = new Date().toDateString();
+    const history = lsGet('vitalsHistory', []);
+    const todayIdx = history.findIndex(h => {
+      const d = h.recordedAt ? new Date(h.recordedAt).toDateString() : null;
+      return d === today;
+    });
+    const entry = { ...(history[todayIdx] || {}), weight: weightValue, recordedAt: new Date().toISOString() };
+    if (todayIdx >= 0) history[todayIdx] = entry; else history.unshift(entry);
+    lsSet('vitalsHistory', history);
+  }, [weightValue]);
 
   const startCamera = async () => {
     try {
@@ -186,13 +225,14 @@ export default function Health() {
         />
         <button
           onClick={() => { setScanResult(null); setView('menu'); setSelectedDrug(''); stopCam(); }}
+          className="btn-tap"
           style={{ background: 'none', border: 'none', color: 'var(--t)', fontWeight: 800, fontSize: 'var(--fs-md)', marginBottom: 'var(--sp-4)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
         >
           {'<'} Back
         </button>
 
         {scanResult.type === 'drug' && (
-          <WCard style={{ background: scanResult.col?.[0] || 'var(--sgl)', border: `1.5px solid ${scanResult.col?.[1] || 'var(--sgm)'}44` }}>
+          <WCard className="reveal-in" style={{ background: scanResult.col?.[0] || 'var(--sgl)', border: `1.5px solid ${scanResult.col?.[1] || 'var(--sgm)'}44` }}>
             <div style={{ display: 'flex', gap: 'var(--gap-md)', alignItems: 'center', marginBottom: 'var(--sp-4)' }}>
               <div style={{ width: 'var(--icon-md)', height: 'var(--icon-md)', borderRadius: 'var(--r)', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--fs-2xl)', boxShadow: 'var(--sh)', flexShrink: 0 }}>
                 {scanResult.icon || '💊'}
@@ -222,7 +262,7 @@ export default function Health() {
         )}
 
         {scanResult.type === 'jaundice' && (
-          <WCard style={{ background: `linear-gradient(135deg, ${scanResult.color || 'var(--sgl)'}, var(--warm))` }}>
+          <WCard className="reveal-in" style={{ background: `linear-gradient(135deg, ${scanResult.color || 'var(--sgl)'}, var(--warm))` }}>
             <div style={{ textAlign: 'center', marginBottom: 'var(--sp-4)' }}>
               <div style={{ fontSize: 48, marginBottom: 'var(--sp-2)' }}>👶</div>
               <h2 style={{ fontSize: 'var(--fs-xl)', fontWeight: 800, color: scanResult.color || 'var(--sg)' }}>
@@ -239,7 +279,7 @@ export default function Health() {
         )}
 
         {scanResult.type === 'symptom' && (
-          <WCard style={{ background: `linear-gradient(135deg, ${scanResult.color || 'var(--sgl)'}, var(--warm))` }}>
+          <WCard className="reveal-in" style={{ background: `linear-gradient(135deg, ${scanResult.color || 'var(--sgl)'}, var(--warm))` }}>
             <div style={{ textAlign: 'center', marginBottom: 'var(--sp-4)' }}>
               <div style={{ fontSize: 48, marginBottom: 'var(--sp-2)' }}>🔍</div>
               <h2 style={{ fontSize: 'var(--fs-xl)', fontWeight: 800, color: scanResult.color || 'var(--sg)' }}>
@@ -275,9 +315,9 @@ export default function Health() {
         </div>
 
         {cameraError && (
-          <WCard style={{ background: 'var(--rdl)' }}>
+          <WCard className="reveal-in" style={{ background: 'var(--rdl)' }}>
             <p style={{ color: 'var(--rd)' }}>{cameraError}</p>
-            <button onClick={() => setCameraError(null)} style={{ marginTop: 8, background: 'var(--rd)', color: '#fff', border: 'none', borderRadius: 20, padding: '6px 16px', cursor: 'pointer' }}>
+            <button onClick={() => setCameraError(null)} className="btn-tap" style={{ marginTop: 8, background: 'var(--rd)', color: '#fff', border: 'none', borderRadius: 20, padding: '6px 16px', cursor: 'pointer' }}>
               Try Again
             </button>
           </WCard>
@@ -292,6 +332,7 @@ export default function Health() {
 
         <button
           onClick={() => { stopCam(); setIsScanning(false); setView('menu'); }}
+          className="btn-tap"
           style={{ marginTop: 'var(--sp-4)', width: '100%', padding: 'var(--sp-3)', background: 'var(--warm)', border: '1px solid var(--border)', borderRadius: 'var(--r)', cursor: 'pointer' }}
         >
           Cancel
@@ -303,6 +344,22 @@ export default function Health() {
   // ── Main menu view ────────────────────────────────────────────────────────
   return (
     <div className="page-pad">
+      {/* Food Database Status */}
+      {foodDbReady && foodDbReport && foodDbReport.migratedFoods > 0 && (
+        <WCard style={{ 
+          marginBottom: "var(--gap-md)", 
+          background: "var(--sgl)", 
+          border: "1px solid var(--sgm)44" 
+        }}>
+          <p style={{ fontSize: "var(--fs-xs)", color: "var(--sg)" }}>
+            🍽️ {foodDbReport.migratedFoods} foods loaded from database
+            {foodDbReport.unmappedNutrients?.length > 0 && 
+              ` • ${foodDbReport.unmappedNutrients.length} nutrient tags to review`
+            }
+          </p>
+        </WCard>
+      )}
+
       <EmergencyRedFlags
         bpSys={liveBpSys} bpDia={liveBpDia}
         bleeding={liveBleeding} fetalMovement={liveMovement}
@@ -310,107 +367,211 @@ export default function Health() {
       />
 
       {/* ── Health Insights: heatmap + symptom log + AI insight ── */}
-      <SectionTitle title="🩺 Health Tracking" />
-      <WCard>
-        <HealthInsightPanel
-          journeyType={journeyType}
-          symptoms={symptoms}
-          heatmapData={heatmapData}
-          todayEntry={todayEntry}
-          loadingToday={loadingToday}
-          loadingRecent={loadingRecent}
-          saving={saving}
-          insightLoading={insightLoading}
-          insightError={insightError}
-          onLogSymptoms={logSymptoms}
-          onLogVital={logVital}
-          onGenerateInsight={generateInsight}
-        />
-      </WCard>
+      <div className="card-in card-in-1">
+        <SectionTitle title="🩺 Health Tracking" />
+        <WCard>
+          <HealthInsightPanel
+            journeyType={journeyType}
+            symptoms={symptoms}
+            heatmapData={heatmapData}
+            todayEntry={todayEntry}
+            loadingToday={loadingToday}
+            loadingRecent={loadingRecent}
+            saving={saving}
+            insightLoading={insightLoading}
+            insightError={insightError}
+            onLogSymptoms={logSymptoms}
+            onLogVital={logVital}
+            onGenerateInsight={generateInsight}
+          />
+        </WCard>
+      </div>
+
+      {/* ── Weight Tracker with Slider ── */}
+      <div className="card-in card-in-2">
+        <SectionTitle title="⚖️ Weight Tracker" />
+        <WCard>
+          <RangeSlider
+            label="Current Weight"
+            value={weightValue}
+            onChange={setWeightValue}
+            min={20}
+            max={300}
+            step={0.1}
+            accent="var(--t)"
+            formatValue={(v) => `${v.toFixed(1)} kg`}
+          />
+          <div style={{ 
+            marginTop: 'var(--sp-2)', 
+            padding: 'var(--sp-2)', 
+            background: 'var(--sgl)', 
+            borderRadius: 'var(--r)',
+            fontSize: 'var(--fs-xs)',
+            color: 'var(--sg)'
+          }}>
+            💡 Drag the slider to track your weight. Changes are saved automatically.
+          </div>
+        </WCard>
+      </div>
 
       {/* ── Medication checker ── */}
-      <SectionTitle title="💊 Medication Checker" />
-      <WCard>
-        {searchHistory.length > 0 && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--gap-sm)', marginBottom: 'var(--sp-3)' }}>
-            {searchHistory.map((drug, i) => (
-              <button
-                key={i}
-                onClick={() => handleDrugSearch(drug)}
-                style={{ padding: '4px 12px', background: 'var(--warm)', border: '1px solid var(--border)', borderRadius: 20, fontSize: 'var(--fs-2xs)', cursor: 'pointer' }}
-              >
-                {drug}
-              </button>
-            ))}
+      <div className="card-in card-in-3">
+        <SectionTitle title="💊 Medication Checker" />
+        <WCard>
+          {searchHistory.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--gap-sm)', marginBottom: 'var(--sp-3)' }}>
+              {searchHistory.map((drug, i) => (
+                <button
+                  key={i}
+                  onClick={() => handleDrugSearch(drug)}
+                  className="btn-tap choice-chip"
+                  style={{ padding: '4px 12px', background: 'var(--warm)', border: '1px solid var(--border)', borderRadius: 20, fontSize: 'var(--fs-2xs)', cursor: 'pointer' }}
+                >
+                  {drug}
+                </button>
+              ))}
+            </div>
+          )}
+          <div style={{ display: 'flex', gap: 'var(--gap-sm)' }}>
+            <input
+              type="text"
+              placeholder="Search medication (e.g., paracetamol, ibuprofen)…"
+              value={selectedDrug}
+              onChange={(e) => setSelectedDrug(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleDrugSearch(selectedDrug)}
+              style={{ flex: 1, padding: 'var(--sp-3)', borderRadius: 'var(--r)', border: '1px solid var(--border)', fontSize: 'var(--fs-sm)' }}
+            />
+            <button
+              onClick={() => handleDrugSearch(selectedDrug)}
+              disabled={!selectedDrug.trim()}
+              className="btn-tap"
+              style={{ padding: 'var(--sp-3) var(--sp-4)', background: selectedDrug.trim() ? 'var(--t)' : 'var(--border)', color: selectedDrug.trim() ? '#fff' : 'var(--mt)', border: 'none', borderRadius: 'var(--r)', cursor: selectedDrug.trim() ? 'pointer' : 'not-allowed' }}
+            >
+              Check
+            </button>
           </div>
-        )}
-        <div style={{ display: 'flex', gap: 'var(--gap-sm)' }}>
-          <input
-            type="text"
-            placeholder="Search medication (e.g., paracetamol, ibuprofen)…"
-            value={selectedDrug}
-            onChange={(e) => setSelectedDrug(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleDrugSearch(selectedDrug)}
-            style={{ flex: 1, padding: 'var(--sp-3)', borderRadius: 'var(--r)', border: '1px solid var(--border)', fontSize: 'var(--fs-sm)' }}
-          />
-          <button
-            onClick={() => handleDrugSearch(selectedDrug)}
-            disabled={!selectedDrug.trim()}
-            style={{ padding: 'var(--sp-3) var(--sp-4)', background: selectedDrug.trim() ? 'var(--t)' : 'var(--border)', color: selectedDrug.trim() ? '#fff' : 'var(--mt)', border: 'none', borderRadius: 'var(--r)', cursor: selectedDrug.trim() ? 'pointer' : 'not-allowed' }}
-          >
-            Check
-          </button>
-        </div>
-      </WCard>
+        </WCard>
+      </div>
 
       {/* ── Scan tools (journey-scoped) ── */}
-      <SectionTitle title="🔬 Scan Tools" />
-      {scanTools.map((item, i) => (
-        <WCard key={i} onClick={() => handleScan(item.type)} style={{ padding: 'var(--card-p)', cursor: 'pointer' }}>
-          <div style={{ display: 'flex', gap: 'var(--gap-lg)', alignItems: 'center' }}>
-            <IconBox emoji={item.icon} bg={item.bg} size="var(--icon-md)" />
-            <div style={{ flex: 1 }}>
-              <p style={{ fontSize: 'var(--fs-md)', fontWeight: 800, color: 'var(--dp)', marginBottom: 'var(--sp-1)' }}>{item.title}</p>
-              <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--mt)', lineHeight: 1.45 }}>{item.desc}</p>
-            </div>
-            <div style={{ color: 'var(--mt)', fontSize: 'var(--fs-xl)' }}>›</div>
-          </div>
-        </WCard>
-      ))}
-
-      {/* ── Traditional practices (journey-scoped from Firestore-ready data) ── */}
-      <SectionTitle title="Traditional Practices" />
-      <p style={{ fontSize: 'var(--fs-xs)', color: 'var(--mt)', marginBottom: 'var(--sp-2)' }}>
-        Evidence-based guidance on traditional practices relevant to your journey
-      </p>
-
-      {traditionalPractices.map((t, i) => (
-        <WCard
-          key={i}
-          style={{ padding: 'var(--card-p)', background: t.safe ? 'var(--sgl)' : 'var(--rdl)', border: `1px solid ${t.safe ? 'var(--sgm)' : 'var(--rdm)'}33` }}
-        >
-          <div style={{ display: 'flex', gap: 'var(--gap-md)', alignItems: 'flex-start' }}>
-            <div style={{ width: 'clamp(28px,7vw,36px)', height: 'clamp(28px,7vw,36px)', borderRadius: 'var(--r)', background: t.safe ? 'var(--sg)' : t.status === 'DANGEROUS' ? 'var(--rd)' : 'var(--gd)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 'var(--fs-sm)', flexShrink: 0 }}>
-              {t.safe ? '✓' : t.status === 'DANGEROUS' ? '✗' : '!'}
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ display: 'flex', gap: 'var(--gap-sm)', alignItems: 'center', flexWrap: 'wrap', marginBottom: 'var(--sp-1)' }}>
-                <p style={{ fontSize: 'var(--fs-sm)', fontWeight: 800, color: 'var(--dp)' }}>{t.practice}</p>
-                <Tag
-                  label={t.status}
-                  bg={t.safe ? 'var(--sgl)' : t.status === 'DANGEROUS' ? 'var(--rdl)' : 'var(--gdl)'}
-                  tc={t.safe ? 'var(--sg)'  : t.status === 'DANGEROUS' ? 'var(--rd)'  : 'var(--gd)'}
-                />
+      <div className="card-in card-in-4">
+        <SectionTitle title="🔬 Scan Tools" />
+        {scanTools.map((item, i) => (
+          <WCard 
+            key={i} 
+            onClick={() => handleScan(item.type)} 
+            className="btn-tap"
+            style={{ padding: 'var(--card-p)', cursor: 'pointer', marginBottom: i < scanTools.length - 1 ? 'var(--sp-2)' : 0 }}
+          >
+            <div style={{ display: 'flex', gap: 'var(--gap-lg)', alignItems: 'center' }}>
+              <IconBox emoji={item.icon} bg={item.bg} size="var(--icon-md)" />
+              <div style={{ flex: 1 }}>
+                <p style={{ fontSize: 'var(--fs-md)', fontWeight: 800, color: 'var(--dp)', marginBottom: 'var(--sp-1)' }}>{item.title}</p>
+                <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--mt)', lineHeight: 1.45 }}>{item.desc}</p>
               </div>
-              <p style={{ fontSize: 'var(--fs-xs)', color: 'var(--md)', lineHeight: 1.55 }}>{t.reason}</p>
+              <div style={{ color: 'var(--mt)', fontSize: 'var(--fs-xl)' }}>›</div>
             </div>
+          </WCard>
+        ))}
+      </div>
+
+      {/* ── Traditional practices (legacy + food database) ── */}
+      <div className="card-in card-in-5">
+        <SectionTitle title="🌿 Traditional Practices" />
+        <p style={{ fontSize: 'var(--fs-xs)', color: 'var(--mt)', marginBottom: 'var(--sp-2)' }}>
+          Evidence-based guidance on traditional practices relevant to your journey
+        </p>
+
+        {/* Toggle to show food-based practices if available */}
+        {foodTraditionalPractices.length > 0 && (
+          <div style={{ marginBottom: 'var(--sp-3)' }}>
+            <button
+              onClick={() => setShowFoodPractices(!showFoodPractices)}
+              className="btn-tap"
+              style={{ 
+                padding: '4px 12px', 
+                background: showFoodPractices ? 'var(--sg)' : 'var(--warm)',
+                color: showFoodPractices ? '#fff' : 'var(--text)',
+                border: '1px solid var(--border)', 
+                borderRadius: 20, 
+                cursor: 'pointer',
+                fontSize: 'var(--fs-xs)'
+              }}
+            >
+              {showFoodPractices ? 'Hide Food-Based Practices' : `Show Food-Based Practices (${foodTraditionalPractices.length})`}
+            </button>
           </div>
-        </WCard>
-      ))}
+        )}
+
+        {/* Show either food practices or legacy practices */}
+        {(showFoodPractices ? foodTraditionalPractices : traditionalPractices).map((t, i) => {
+          // Handle both legacy format (safe, status, reason) and food format (safety, riskLevel, guidance)
+          const isSafe = t.safe !== undefined ? t.safe : t.safety === 'safe';
+          const status = t.status || (t.safety ? t.safety.toUpperCase() : 'UNKNOWN');
+          const reason = t.reason || t.guidance || '';
+          const practice = t.practice || t.name || '';
+
+          return (
+            <WCard
+              key={i}
+              className="reveal-in"
+              style={{ 
+                padding: 'var(--card-p)', 
+                background: isSafe ? 'var(--sgl)' : 'var(--rdl)', 
+                border: `1px solid ${isSafe ? 'var(--sgm)' : 'var(--rdm)'}33`,
+                marginBottom: i < traditionalPractices.length - 1 ? 'var(--sp-2)' : 0
+              }}
+            >
+              <div style={{ display: 'flex', gap: 'var(--gap-md)', alignItems: 'flex-start' }}>
+                <div style={{ 
+                  width: 'clamp(28px,7vw,36px)', 
+                  height: 'clamp(28px,7vw,36px)', 
+                  borderRadius: 'var(--r)', 
+                  background: isSafe ? 'var(--sg)' : status === 'DANGEROUS' ? 'var(--rd)' : 'var(--gd)', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  color: '#fff', 
+                  fontSize: 'var(--fs-sm)', 
+                  flexShrink: 0 
+                }}>
+                  {isSafe ? '✓' : status === 'DANGEROUS' ? '✗' : '!'}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', gap: 'var(--gap-sm)', alignItems: 'center', flexWrap: 'wrap', marginBottom: 'var(--sp-1)' }}>
+                    <p style={{ fontSize: 'var(--fs-sm)', fontWeight: 800, color: 'var(--dp)' }}>{practice}</p>
+                    <Tag
+                      label={status}
+                      bg={isSafe ? 'var(--sgl)' : status === 'DANGEROUS' ? 'var(--rdl)' : 'var(--gdl)'}
+                      tc={isSafe ? 'var(--sg)'  : status === 'DANGEROUS' ? 'var(--rd)'  : 'var(--gd)'}
+                    />
+                  </div>
+                  <p style={{ fontSize: 'var(--fs-xs)', color: 'var(--md)', lineHeight: 1.55 }}>{reason}</p>
+                  {/* Show source if from food database */}
+                  {t.sourceIds && t.sourceIds.length > 0 && (
+                    <p style={{ fontSize: 'var(--fs-2xs)', color: 'var(--mt)', marginTop: 'var(--sp-1)' }}>
+                      📚 Source: {t.sourceIds.join(', ')}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </WCard>
+          );
+        })}
+
+        {/* No practices available */}
+        {(!showFoodPractices ? traditionalPractices : foodTraditionalPractices).length === 0 && (
+          <WCard style={{ textAlign: 'center', padding: 'var(--sp-4)' }}>
+            <p style={{ color: 'var(--mt)' }}>No traditional practices available for your journey.</p>
+          </WCard>
+        )}
+      </div>
 
       {/* ── Symptom Risk Engine ── */}
-      <SectionTitle title="Symptom Risk Engine" />
-      <SymptomRisk />
+      <div className="card-in card-in-6">
+        <SectionTitle title="⚠️ Symptom Risk Engine" />
+        <SymptomRisk />
+      </div>
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>

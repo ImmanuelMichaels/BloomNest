@@ -22,7 +22,7 @@ export const JOURNEY_CONFIG = {
       { icon: "🆘", label: "SOS",          id: "sos",       bg: "var(--rdl)", color: "var(--rd)" },
     ],
     showAlert: true,
-    features: ['kick_counter', 'contraction_timer', 'birth_plan', 'appointment_tracker'],
+    features: ['kick_counter', 'contraction_timer', 'birth_plan', 'appointment_tracker', 'hormone_symptom_log'],
   },
 
   conceive: {
@@ -44,7 +44,7 @@ export const JOURNEY_CONFIG = {
       { icon: "🆘", label: "SOS",            id: "sos",       bg: "var(--rdl)", color: "var(--rd)" },
     ],
     showAlert: false,
-    features: ['cycle_tracker', 'ovulation_predictor', 'bbt_chart', 'lh_tracker'],
+    features: ['cycle_tracker', 'ovulation_predictor', 'bbt_chart', 'lh_tracker', 'hormone_symptom_log'],
   },
 
   ivf: {
@@ -66,7 +66,7 @@ export const JOURNEY_CONFIG = {
       { icon: "🆘", label: "SOS",          id: "sos",         bg: "var(--rdl)", color: "var(--rd)" },
     ],
     showAlert: true,
-    features: ['medication_tracker', 'embryo_tracker', 'scan_log', 'tww_support'],
+    features: ['medication_tracker', 'embryo_tracker', 'scan_log', 'tww_support', 'hormone_symptom_log'],
   },
 
   mom: {
@@ -88,14 +88,14 @@ export const JOURNEY_CONFIG = {
       { icon: "🆘", label: "SOS",              id: "sos",       bg: "var(--rdl)", color: "var(--rd)" },
     ],
     showAlert: true,
-    features: ['feeding_tracker', 'pump_log', 'sleep_tracker', 'vaccination_reminders', 'epds_screening'],
+    features: ['feeding_tracker', 'pump_log', 'sleep_tracker', 'vaccination_reminders', 'epds_screening', 'hormone_symptom_log'],
   },
 
   menstrual: {
     id: 'menstrual',
     name: 'Menstrual Health',
     description: 'Track your menstrual cycle',
-    tabs: ["home", "menstrual", "nutrition", "vitals", "health", "mental", "chat", "insights", "profile"],
+    tabs: ["home", "menstrual", "nutrition", "vitals", "health", "mental", "chat", "insights", "profile",],
     pills: [
       { dot: "var(--lv)", label: "Follicular Phase", bg: "var(--lvl)" },
       { dot: "var(--sg)", label: "Energy rising ☀️", bg: "var(--sgl)" },
@@ -110,7 +110,7 @@ export const JOURNEY_CONFIG = {
       { icon: "🆘", label: "SOS",        id: "sos",       bg: "var(--rdl)", color: "var(--rd)" },
     ],
     showAlert: false,
-    features: ['period_tracker', 'symptom_log', 'mood_tracker', 'cycle_insights'],
+    features: ['period_tracker', 'symptom_log', 'mood_tracker', 'cycle_insights', 'hormone_symptom_log'],
   },
 
   menopause: {
@@ -132,7 +132,7 @@ export const JOURNEY_CONFIG = {
       { icon: "🆘", label: "SOS",           id: "sos",       bg: "var(--rdl)", color: "var(--rd)" },
     ],
     showAlert: true,
-    features: ['symptom_tracker', 'hrt_logger', 'bone_health', 'heart_health'],
+    features: ['symptom_tracker', 'hrt_logger', 'bone_health', 'heart_health', 'hormone_symptom_log'],
   },
 };
 

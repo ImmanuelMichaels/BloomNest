@@ -3,6 +3,19 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { WCard, SectionTitle, Tag, Pill, IconBox } from '../../components/ui';
 import { useApp } from '../../context/useApp';
 import { isFoodAllowed, parseFoodString, filterAllowedFoods } from '../../utils/dietaryFilters';
+import {
+  getCulturalMeal,
+  getFoodsForJourney,
+  getMealSuggestions  // ✅ Fixed import name
+} from '../../data/foods/resolver';
+import {
+  analyzeCraving,
+  getNigerianFoods,
+  getJourneyNutrition,
+  getMeals,
+  SUPPS
+} from '../../data/supplements';
+import '../../styles/motion.css';
 
 export default function Nutrition() {
   const { 
@@ -12,7 +25,10 @@ export default function Nutrition() {
     getTrimester, 
     babyAgeDays, 
     setShowSOS,
-    dietaryPractices
+    dietaryPractices,
+    foodDbReady,
+    foodDbReport,
+    getJourneyDisplay
   } = useApp();
   
   // Safe display values
@@ -21,29 +37,57 @@ export default function Nutrition() {
   const weekLabel = currentWeek ? `Week ${currentWeek}` : 'This Week';
   
   // State for user data
-  const [mealLogs, setMealLogs] = useState([]);
-  const [nutritionLogs, setNutritionLogs] = useState([]);
-  const [userPreferences, setUserPreferences] = useState({});
-  const [mealSwaps, setMealSwaps] = useState({});
-  
-  // FIX: Proper date handling - default to TODAY
-  const [selectedDate, setSelectedDate] = useState(() => {
-    const today = new Date();
-    return today.toISOString().split('T')[0]; // YYYY-MM-DD format
+  const [mealLogs, setMealLogs] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('mealHistory') || '[]');
+    } catch {
+      return [];
+    }
   });
   
-  // State for UI
+  const [nutritionLogs, setNutritionLogs] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('nutritionLogs') || '[]');
+    } catch {
+      return [];
+    }
+  });
+  
+  const [mealSwaps, setMealSwaps] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('mealSwaps') || '{}');
+    } catch {
+      return {};
+    }
+  });
+  
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  });
+  
   const [meal, setMeal] = useState("morning");
-  const [supplements, setSupplements] = useState([]);
+  const [supplements, setSupplements] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('dailySupplements') || '{}');
+      const today = new Date().toISOString().split('T')[0];
+      if (saved.date === today) {
+        return saved.taken || [];
+      }
+      return [];
+    } catch {
+      return [];
+    }
+  });
   const [craving, setCraving] = useState("");
   const [cravingResult, setCravingResult] = useState(null);
   const [showSwapModal, setShowSwapModal] = useState(false);
   const [selectedMealItem, setSelectedMealItem] = useState(null);
   const [swapOption, setSwapOption] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [showDatePicker, setShowDatePicker] = useState(false);
   const [showMealModal, setShowMealModal] = useState(false);
   const [newMeal, setNewMeal] = useState({ name: '', description: '', nutrients: {} });
+  const [mealSuggestions, setMealSuggestions] = useState([]);
   
   // Check if selected date is today
   const isToday = useMemo(() => {
@@ -84,7 +128,6 @@ export default function Nutrition() {
     const nextDate = date.toISOString().split('T')[0];
     const today = new Date().toISOString().split('T')[0];
     
-    // Don't allow going into the future
     if (nextDate <= today) {
       setSelectedDate(nextDate);
     }
@@ -94,40 +137,30 @@ export default function Nutrition() {
     setSelectedDate(new Date().toISOString().split('T')[0]);
   }, []);
   
-  // Load REAL user data from localStorage
+  // Load user data from localStorage
   useEffect(() => {
     try {
-      // Load meal history
       const savedMeals = localStorage.getItem('mealHistory');
       if (savedMeals) {
         setMealLogs(JSON.parse(savedMeals));
       }
       
-      // Load nutrition logs
       const savedNutrition = localStorage.getItem('nutritionLogs');
       if (savedNutrition) {
         setNutritionLogs(JSON.parse(savedNutrition));
       }
       
-      // Load user preferences
-      const savedPrefs = localStorage.getItem('mealPreferences');
-      if (savedPrefs) {
-        setUserPreferences(JSON.parse(savedPrefs));
-      }
-      
-      // Load saved swaps
       const savedSwaps = localStorage.getItem('mealSwaps');
       if (savedSwaps) {
         setMealSwaps(JSON.parse(savedSwaps));
       }
       
-      // Load supplement tracking
       const savedSupps = localStorage.getItem('dailySupplements');
       if (savedSupps) {
         const suppData = JSON.parse(savedSupps);
         const today = new Date().toISOString().split('T')[0];
         if (suppData.date === today) {
-          setSupplements(suppData.taken);
+          setSupplements(suppData.taken || []);
         } else {
           setSupplements([]);
         }
@@ -141,6 +174,41 @@ export default function Nutrition() {
     }
   }, []);
   
+  // ─── Load meal suggestions from new food database ──────────────────────────
+  useEffect(() => {
+    if (foodDbReady) {
+      try {
+        const foodCount = {};
+        mealLogs.forEach(log => {
+          if (log.items) {
+            log.items.forEach(item => {
+              const name = typeof item === 'string' ? item : item.name;
+              if (name) foodCount[name] = (foodCount[name] || 0) + 1;
+            });
+          }
+        });
+        
+        const favoriteFoods = Object.entries(foodCount)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 5)
+          .map(([name]) => name);
+        
+        // ✅ Use the correct function name
+        const suggestions = getMealSuggestions({
+          favoriteFoods,
+          dietaryPractices,
+          journeyType,
+          culture: culture || 'west_central_african'
+        });
+        
+        setMealSuggestions(suggestions);
+      } catch (error) {
+        console.warn('Failed to load meal suggestions:', error);
+        setMealSuggestions([]);
+      }
+    }
+  }, [foodDbReady, mealLogs, dietaryPractices, journeyType, culture]);
+  
   // Save supplement state
   const saveSupplements = useCallback((updatedSupps) => {
     try {
@@ -149,12 +217,13 @@ export default function Nutrition() {
         taken: updatedSupps
       };
       localStorage.setItem('dailySupplements', JSON.stringify(data));
+      setSupplements(updatedSupps);
     } catch (error) {
       console.error('Failed to save supplements:', error);
     }
   }, []);
   
-  // Get meals for selected date from REAL logs
+  // Get meals for selected date from logs
   const todaysMeals = useMemo(() => {
     return mealLogs.filter(log => log.date === selectedDate);
   }, [mealLogs, selectedDate]);
@@ -164,7 +233,35 @@ export default function Nutrition() {
     return todaysMeals.filter(m => m.mealType === meal);
   }, [todaysMeals, meal]);
   
-  // Calculate nutritional insights from REAL data (last 7 days from today, not selected date)
+  // ─── Get recommended meals from new food database ─────────────────────────
+  const recommendedMeals = useMemo(() => {
+    if (!foodDbReady) return [];
+    
+    try {
+      const mealData = getCulturalMeal(
+        culture || 'west_central_african',
+        meal,
+        journeyType
+      );
+      
+      return mealData[meal] || [];
+    } catch (error) {
+      console.warn('Failed to get recommended meals:', error);
+      return [];
+    }
+  }, [foodDbReady, culture, meal, journeyType]);
+  
+  // ─── Get journey nutrition info ────────────────────────────────────────────
+  const journeyNutrition = useMemo(() => {
+    try {
+      return getJourneyNutrition(journeyType, trimester);
+    } catch (error) {
+      console.warn('Failed to get journey nutrition:', error);
+      return null;
+    }
+  }, [journeyType, trimester]);
+  
+  // Calculate nutritional insights from real data
   const nutritionalInsights = useMemo(() => {
     if (nutritionLogs.length === 0) return null;
     
@@ -197,9 +294,12 @@ export default function Nutrition() {
   const favoriteFoods = useMemo(() => {
     const foodCount = {};
     mealLogs.forEach(log => {
-      log.items?.forEach(item => {
-        foodCount[item.name] = (foodCount[item.name] || 0) + 1;
-      });
+      if (log.items) {
+        log.items.forEach(item => {
+          const name = typeof item === 'string' ? item : item.name;
+          if (name) foodCount[name] = (foodCount[name] || 0) + 1;
+        });
+      }
     });
     
     return Object.entries(foodCount)
@@ -208,7 +308,7 @@ export default function Nutrition() {
       .map(([name]) => name);
   }, [mealLogs]);
   
-  // Check for nutritional gaps based on REAL data
+  // Check for nutritional gaps
   const nutritionalGaps = useMemo(() => {
     if (!nutritionalInsights) return [];
     
@@ -221,7 +321,7 @@ export default function Nutrition() {
           current: nutritionalInsights.avgIron,
           target: 27,
           message: "Iron is crucial for baby's development",
-          foods: "lean red meat, spinach, lentils",
+          foods: "lean red meat, spinach, lentils, ugu leaf",
           unit: "mg"
         });
       }
@@ -231,7 +331,7 @@ export default function Nutrition() {
           current: nutritionalInsights.avgCalcium,
           target: 1000,
           message: "Baby's bones are developing",
-          foods: "milk, yogurt, cheese, fortified alternatives",
+          foods: "milk, yogurt, cheese, tiger nuts, fortified alternatives",
           unit: "mg"
         });
       }
@@ -243,7 +343,7 @@ export default function Nutrition() {
         current: nutritionalInsights.avgProtein,
         target: 70,
         message: "Essential for tissue growth",
-        foods: "eggs, chicken, fish, beans",
+        foods: "eggs, chicken, fish, beans, moi moi",
         unit: "g"
       });
     }
@@ -251,44 +351,7 @@ export default function Nutrition() {
     return gaps;
   }, [nutritionalInsights, journeyType]);
   
-  // ========== FIX #1 & #2: Declare getMealSuggestions FIRST ==========
-  const getMealSuggestions = useCallback(() => {
-    if (favoriteFoods.length === 0) {
-      return [{
-        name: "Log your first meal",
-        description: "Start tracking what you eat to get personalized suggestions",
-        suggestion: true
-      }];
-    }
-    
-    return favoriteFoods.map(food => ({
-      name: `Try ${food} with a twist`,
-      description: `Based on your love for ${food}, consider adding vegetables or changing the preparation method`,
-      basedOn: food
-    }));
-  }, [favoriteFoods]);
-  
-  // ========== FIX #1 & #3: Filtered meal suggestions with correct logic ==========
-  const filteredMealSuggestions = useMemo(() => {
-    const suggestions = getMealSuggestions();
-    if (!suggestions.length) return [];
-    
-    return suggestions.filter(suggestion => {
-      const match = suggestion.name.match(/Try (.+?) with/);
-      if (match) {
-        const suggestedFood = match[1].toLowerCase();
-        const foodParts = suggestedFood.split(' ');
-        
-        // ALL parts must be allowed - use .every(), not .some()
-        const isAllowed = isFoodAllowed(suggestedFood, dietaryPractices) &&
-                         foodParts.every(part => isFoodAllowed(part, dietaryPractices));
-        return isAllowed;
-      }
-      return true; // Keep non-food suggestions
-    });
-  }, [getMealSuggestions, dietaryPractices]);
-  
-  // ========== FIX #6: Filtered nutritional gaps with proper handling ==========
+  // ─── Filtered nutritional gaps with dietary practices ─────────────────────
   const filteredNutritionalGaps = useMemo(() => {
     const gaps = nutritionalGaps;
     if (!gaps.length) return [];
@@ -313,113 +376,115 @@ export default function Nutrition() {
         noAllowedFoods: false
       };
     });
-    // FIX #5: Removed dead .filter(gap => gap !== null)
   }, [nutritionalGaps, dietaryPractices]);
   
-  // ========== FIX #7: Craving analysis with noAllowedFoods propagation ==========
+  // ─── Craving analysis ──────────────────────────────────────────────────────
   const analyseCraving = useCallback(() => {
     if (!craving.trim()) return;
     
-    const matchingGap = filteredNutritionalGaps.find(gap => 
-      craving.toLowerCase().includes(gap.nutrient.toLowerCase())
-    );
-    
-    let result;
-    
-    if (matchingGap) {
-      result = {
-        deficiency: `You might need more ${matchingGap.nutrient}`,
-        food: matchingGap.foods,
-        urgent: matchingGap.nutrient === "Iron" && matchingGap.current < 15,
-        basedOnData: true,
-        hasRestrictions: matchingGap.hasRestrictions,
-        noAllowedFoods: matchingGap.noAllowedFoods || false
-      };
-    } else if (nutritionalInsights && nutritionalInsights.daysTracked < 3) {
-      result = {
-        deficiency: "Not enough data yet",
-        food: "Log more meals to see personalized insights",
-        urgent: false,
-        basedOnData: false,
-        hasRestrictions: false,
-        noAllowedFoods: false
-      };
-    } else {
-      result = {
-        deficiency: "No clear deficiency detected",
-        food: "Your cravings might be emotional or habitual",
-        urgent: false,
-        basedOnData: true,
-        hasRestrictions: false,
-        noAllowedFoods: false
-      };
+    try {
+      const result = analyzeCraving(craving);
+      
+      const matchingGap = filteredNutritionalGaps.find(gap => 
+        craving.toLowerCase().includes(gap.nutrient.toLowerCase())
+      );
+      
+      if (matchingGap) {
+        result.relatedNutrient = matchingGap.nutrient;
+        result.relatedGap = matchingGap;
+      }
+      
+      setCravingResult(result);
+      
+      if (result.urgent && setShowSOS) {
+        setShowSOS(true);
+      }
+    } catch (error) {
+      console.warn('Craving analysis failed:', error);
+      setCravingResult({
+        deficiency: "Unable to analyze craving",
+        food: "Please try again or consult a healthcare provider",
+        icon: "🤔",
+        urgent: false
+      });
     }
-    
-    setCravingResult(result);
-    if (result.urgent && setShowSOS) {
-      setShowSOS(true);
-    }
-  }, [craving, filteredNutritionalGaps, nutritionalInsights, setShowSOS]);
+  }, [craving, filteredNutritionalGaps, setShowSOS]);
   
-  // ========== Helper for alternative foods with better keyword matching ==========
-  const getAlternativeFoods = useCallback((originalFood, practices) => {
-    const alternatives = {
-      beef: ["lentils", "mushrooms", "beans", "tofu", "tempeh"],
-      pork: ["chicken", "turkey", "tofu", "tempeh", "beans", "lentils"],
-      chicken: ["tofu", "tempeh", "beans", "lentils", "mushrooms", "seitan"],
-      fish: ["tofu", "beans", "lentils", "chickpeas", "nuts", "seeds", "tempeh"],
-      milk: ["soy milk", "oat milk", "almond milk", "coconut milk", "fortified alternatives"],
-      cheese: ["nutritional yeast", "vegan cheese", "tofu-based alternatives", "cashew cheese"],
-      eggs: ["tofu scramble", "mashed bananas (baking)", "flax eggs", "chickpea flour", "aquafaba"],
-    };
+  // ─── Filtered meal suggestions ─────────────────────────────────────────────
+  const filteredMealSuggestions = useMemo(() => {
+    if (!mealSuggestions.length) return [];
     
-    const originalKey = Object.keys(alternatives).find(key => {
-      const words = originalFood.toLowerCase().split(/\s+/);
-      return words.includes(key) || 
-             (originalFood.toLowerCase().includes(key) && 
-              !originalFood.toLowerCase().includes(`no ${key}`) && 
-              !originalFood.toLowerCase().includes(`${key}-free`));
+    return mealSuggestions.filter(suggestion => {
+      const foodMatch = suggestion.name.match(/Try (.+?)(?: with|$)/);
+      if (foodMatch) {
+        const suggestedFood = foodMatch[1].toLowerCase();
+        const foodParts = suggestedFood.split(' ');
+        const isAllowed = isFoodAllowed(suggestedFood, dietaryPractices) &&
+                         foodParts.every(part => isFoodAllowed(part, dietaryPractices));
+        return isAllowed;
+      }
+      return true;
     });
-    
-    if (originalKey && alternatives[originalKey]) {
-      const allowed = filterAllowedFoods(alternatives[originalKey], practices);
-      return allowed.length > 0 ? allowed.join(', ') : "beans, lentils, tofu, nuts, seeds, or vegetables";
-    }
-    
-    return "beans, lentils, tofu, nuts, seeds, or vegetables";
-  }, []);
+  }, [mealSuggestions, dietaryPractices]);
   
-  // Handle meal swap with REAL persistence
+  // Handle meal swap
   const handleSwapMeal = useCallback((mealItem) => {
     setSelectedMealItem(mealItem);
+    const foodName = typeof mealItem === 'string' ? mealItem : mealItem.name;
     
-    // Generate alternatives based on dietary practices
-    let alternativeName = `Alternative to ${mealItem.name}`;
-    let alternativePrep = "Try a different preparation method";
+    const isAllowed = isFoodAllowed(foodName, dietaryPractices);
     
-    if (!isFoodAllowed(mealItem.name, dietaryPractices)) {
-      alternativeName = `${mealItem.name} not suitable for your dietary preferences`;
-      alternativePrep = `Based on your preferences (${dietaryPractices.join(', ')}), here are some alternatives: ${getAlternativeFoods(mealItem.name, dietaryPractices)}`;
+    if (!isAllowed) {
+      try {
+        const suggestions = getMealSuggestions({
+          favoriteFoods: [foodName],
+          dietaryPractices,
+          journeyType,
+          culture: culture || 'west_central_african'
+        });
+        
+        if (suggestions.length > 0) {
+          setSwapOption({
+            name: `Alternative to ${foodName}`,
+            prep: suggestions[0].description || 'Try one of these alternatives',
+            alternatives: suggestions.map(s => s.name).join(', ')
+          });
+        } else {
+          setSwapOption({
+            name: `Alternative to ${foodName}`,
+            prep: `Based on your dietary preferences (${dietaryPractices.join(', ')}), try: beans, lentils, tofu, nuts, seeds, or vegetables`,
+            alternatives: 'beans, lentils, tofu, nuts, seeds, vegetables'
+          });
+        }
+      } catch (error) {
+        setSwapOption({
+          name: `Alternative to ${foodName}`,
+          prep: `Try: beans, lentils, tofu, nuts, seeds, or vegetables`,
+          alternatives: 'beans, lentils, tofu, nuts, seeds, vegetables'
+        });
+      }
+    } else {
+      setSwapOption({
+        name: `Try a different preparation of ${foodName}`,
+        prep: 'Same food, different cooking method can change the flavour and texture',
+        alternatives: 'grilled, steamed, roasted, or raw'
+      });
     }
     
-    setSwapOption({
-      name: alternativeName,
-      nutrients: "Based on your preferences",
-      prep: alternativePrep
-    });
     setShowSwapModal(true);
-  }, [dietaryPractices, getAlternativeFoods]);
+  }, [dietaryPractices, journeyType, culture]);
   
-  // Apply swap to REAL data
+  // Apply swap
   const handleApplySwap = useCallback(() => {
     if (selectedMealItem && swapOption) {
       try {
+        const key = typeof selectedMealItem === 'string' ? selectedMealItem : selectedMealItem.name;
         const updatedSwaps = {
           ...mealSwaps,
-          [selectedMealItem.name]: {
+          [key]: {
             ...swapOption,
             date: new Date().toISOString(),
-            originalMeal: selectedMealItem.name
+            originalMeal: key
           }
         };
         localStorage.setItem('mealSwaps', JSON.stringify(updatedSwaps));
@@ -442,7 +507,8 @@ export default function Nutrition() {
         mealType: meal,
         name: newMeal.name,
         description: newMeal.description || `${newMeal.name} meal`,
-        nutrients: newMeal.nutrients,
+        nutrients: newMeal.nutrients || {},
+        items: [newMeal.name],
         timestamp: new Date().toISOString()
       };
       
@@ -450,11 +516,10 @@ export default function Nutrition() {
       setMealLogs(updatedLogs);
       localStorage.setItem('mealHistory', JSON.stringify(updatedLogs));
       
-      // Also update nutrition logs if calories provided
       if (newMeal.nutrients?.calories) {
         const updatedNutrition = [...nutritionLogs, {
           date: selectedDate,
-          calories: newMeal.nutrients.calories,
+          calories: newMeal.nutrients.calories || 0,
           protein: newMeal.nutrients.protein || 0,
           iron: newMeal.nutrients.iron || 0,
           calcium: newMeal.nutrients.calcium || 0,
@@ -464,7 +529,6 @@ export default function Nutrition() {
         localStorage.setItem('nutritionLogs', JSON.stringify(updatedNutrition));
       }
       
-      // Reset form
       setNewMeal({ name: '', description: '', nutrients: {} });
       setShowMealModal(false);
     } catch (error) {
@@ -476,15 +540,24 @@ export default function Nutrition() {
   const toggleSupplement = useCallback((index) => {
     const updated = [...supplements];
     updated[index] = !updated[index];
-    setSupplements(updated);
     saveSupplements(updated);
   }, [supplements, saveSupplements]);
   
+  // Render loading state
   if (isLoading) {
     return (
       <div className="page-pad">
         <div style={{ textAlign: "center", padding: "var(--sp-8)" }}>
-          Loading your nutrition data...
+          <div style={{ 
+            width: 40, 
+            height: 40, 
+            border: '3px solid var(--border)', 
+            borderTopColor: 'var(--t)', 
+            borderRadius: '50%', 
+            animation: 'spin 1s linear infinite', 
+            margin: '0 auto var(--sp-4)' 
+          }} />
+          <p style={{ color: 'var(--mt)' }}>Loading your nutrition data...</p>
         </div>
       </div>
     );
@@ -492,11 +565,55 @@ export default function Nutrition() {
   
   return (
     <div className="page-pad">
-      <SectionTitle title="🥗 Nutrition" subtitle="Personalized from your tracked data" />
+      {/* Food Database Status */}
+      {foodDbReady && foodDbReport && foodDbReport.migratedFoods > 0 && (
+        <WCard style={{ 
+          marginBottom: "var(--gap-md)", 
+          background: "var(--sgl)", 
+          border: "1px solid var(--sgm)44" 
+        }}>
+          <p style={{ fontSize: "var(--fs-xs)", color: "var(--sg)" }}>
+            🍽️ {foodDbReport.migratedFoods} foods loaded from database
+            {foodDbReport.unmappedNutrients?.length > 0 && 
+              ` • ${foodDbReport.unmappedNutrients.length} nutrient tags to review`
+            }
+          </p>
+        </WCard>
+      )}
 
-      {/* Show dietary practices summary if any */}
+      <div className="card-in card-in-1">
+        <SectionTitle 
+          title="🥗 Nutrition" 
+          subtitle={journeyNutrition ? `${journeyNutrition.title}` : weekLabel} 
+        />
+      </div>
+
+      {/* Journey Nutrition Card */}
+      {journeyNutrition && (
+        <WCard className="card-in card-in-2" style={{ 
+          marginBottom: "var(--gap-md)", 
+          background: "var(--lvl)",
+          border: "1px solid var(--border)44"
+        }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-2)" }}>
+            <p style={{ fontWeight: 700, fontSize: "var(--fs-md)" }}>{journeyNutrition.title}</p>
+            <p style={{ fontSize: "var(--fs-sm)", color: "var(--mt)" }}>
+              <strong>Focus:</strong> {journeyNutrition.focus}
+            </p>
+            <p style={{ fontSize: "var(--fs-xs)", color: "var(--md)" }}>
+              <strong>Recommended:</strong> {journeyNutrition.foods}
+            </p>
+            <Tag label={journeyNutrition.tips} bg="var(--bll)" tc="var(--bl)" />
+          </div>
+        </WCard>
+      )}
+
+      {/* Show dietary practices summary */}
       {dietaryPractices && dietaryPractices.length > 0 && (
-        <WCard style={{ marginBottom: "var(--gap-md)", background: "var(--lvl)" }}>
+        <WCard className="card-in card-in-3" style={{ 
+          marginBottom: "var(--gap-md)", 
+          background: "var(--lvl)" 
+        }}>
           <div style={{ display: "flex", alignItems: "center", gap: "var(--gap-sm)", flexWrap: "wrap" }}>
             <span style={{ fontWeight: 600, fontSize: "var(--fs-sm)" }}>Your dietary preferences:</span>
             {dietaryPractices.map(practice => (
@@ -508,7 +625,10 @@ export default function Nutrition() {
 
       {/* Real Data Summary */}
       {nutritionalInsights && nutritionalInsights.daysTracked > 0 ? (
-        <WCard style={{ marginBottom: "var(--gap-md)", background: "var(--lvl)" }}>
+        <WCard className="card-in card-in-4" style={{ 
+          marginBottom: "var(--gap-md)", 
+          background: "var(--lvl)" 
+        }}>
           <p style={{ fontWeight: 800, marginBottom: "var(--sp-2)" }}>📊 Your 7-Day Nutrition</p>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: "var(--gap-sm)" }}>
             <div>
@@ -530,18 +650,30 @@ export default function Nutrition() {
           </div>
         </WCard>
       ) : (
-        <WCard style={{ marginBottom: "var(--gap-md)", textAlign: "center" }}>
+        <WCard className="card-in card-in-4" style={{ 
+          marginBottom: "var(--gap-md)", 
+          textAlign: "center" 
+        }}>
           <p>📝 No nutrition data yet</p>
-          <p style={{ fontSize: "var(--fs-xs)", color: "var(--mt)" }}>Start logging your meals to see personalized insights</p>
+          <p style={{ fontSize: "var(--fs-xs)", color: "var(--mt)" }}>
+            Start logging your meals to see personalized insights
+          </p>
         </WCard>
       )}
 
-      {/* Nutritional Gaps - NOW FILTERED */}
+      {/* Nutritional Gaps */}
       {filteredNutritionalGaps.length > 0 && (
-        <WCard style={{ marginBottom: "var(--gap-md)", background: "var(--warm)", border: "1px solid var(--border2)" }}>
+        <WCard className="card-in card-in-5" style={{ 
+          marginBottom: "var(--gap-md)", 
+          background: "var(--warm)", 
+          border: "1px solid var(--border2)" 
+        }}>
           <p style={{ fontWeight: 800, marginBottom: "var(--sp-2)" }}>⚠️ Nutritional Gaps Detected</p>
           {filteredNutritionalGaps.map((gap, i) => (
-            <div key={i} style={{ marginBottom: "var(--sp-3)" }}>
+            <div key={i} className="reveal-in" style={{ 
+              marginBottom: "var(--sp-3)", 
+              animationDelay: `${i * 0.08}s` 
+            }}>
               <p style={{ fontWeight: 700, fontSize: "var(--fs-sm)" }}>
                 Low {gap.nutrient}: {gap.current}/{gap.target} {gap.unit}
               </p>
@@ -563,10 +695,12 @@ export default function Nutrition() {
       )}
 
       {/* Date selector */}
-      <SectionTitle title={`📅 ${formatDisplayDate(selectedDate)}`} />
+      <div className="card-in card-in-6">
+        <SectionTitle title={`📅 ${formatDisplayDate(selectedDate)}`} />
+      </div>
       
       {/* Date navigation controls */}
-      <div style={{ 
+      <div className="card-in card-in-7" style={{ 
         display: "flex", 
         alignItems: "center", 
         justifyContent: "space-between",
@@ -575,6 +709,7 @@ export default function Nutrition() {
       }}>
         <button 
           onClick={goToPreviousDay}
+          className="btn-tap"
           style={{
             padding: "var(--sp-2) var(--sp-3)",
             background: "var(--lvl)",
@@ -588,6 +723,7 @@ export default function Nutrition() {
         
         <button 
           onClick={goToToday}
+          className="btn-tap"
           style={{
             padding: "var(--sp-2) var(--sp-3)",
             background: isToday ? "var(--sg)" : "var(--lvl)",
@@ -604,10 +740,11 @@ export default function Nutrition() {
         <button 
           onClick={goToNextDay}
           disabled={isToday}
+          className="btn-tap"
           style={{
             padding: "var(--sp-2) var(--sp-3)",
-            border: "1px solid #675947",
-            color: "#000",
+            border: "1px solid var(--border)",
+            color: isToday ? "var(--mt)" : "var(--text)",
             borderRadius: "var(--r)",
             cursor: isToday ? "not-allowed" : "pointer",
             opacity: isToday ? 0.5 : 1
@@ -618,7 +755,12 @@ export default function Nutrition() {
       </div>
       
       {/* Meal type selector */}
-      <div style={{ display: "flex", gap: "var(--gap-sm)", marginBottom: "var(--sp-4)", overflowX: "auto" }}>
+      <div className="card-in card-in-8" style={{ 
+        display: "flex", 
+        gap: "var(--gap-sm)", 
+        marginBottom: "var(--sp-4)", 
+        overflowX: "auto" 
+      }}>
         {[
           { id: "morning", label: "🌅 Breakfast", icon: "🌅" },
           { id: "afternoon", label: "☀️ Lunch", icon: "☀️" },
@@ -630,80 +772,180 @@ export default function Nutrition() {
             label={m.label} 
             active={meal === m.id} 
             onClick={() => setMeal(m.id)} 
+            className="btn-tap choice-chip"
           />
         ))}
       </div>
       
       {/* Display meals for selected date */}
-      {currentMeals.length > 0 ? (
-        currentMeals.map((mealItem, i) => (
-          <WCard key={i} style={{ padding: "var(--card-p)", marginBottom: "var(--gap-sm)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-              <div style={{ flex: 1 }}>
-                <p style={{ fontWeight: 800, fontSize: "var(--fs-md)" }}>{mealItem.name}</p>
-                <p style={{ fontSize: "var(--fs-xs)", color: "var(--mt)", marginTop: "var(--sp-1)" }}>
-                  {mealItem.description}
-                </p>
-                {mealItem.nutrients && Object.keys(mealItem.nutrients).length > 0 && (
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--gap-sm)", marginTop: "var(--sp-2)" }}>
-                    {Object.entries(mealItem.nutrients).map(([key, value]) => (
-                      <Tag key={key} label={`${key}: ${value}`} bg="var(--sgl)" tc="var(--sg)" />
-                    ))}
-                  </div>
-                )}
+      <div className="card-in card-in-9">
+        <SectionTitle 
+          title={currentMeals.length > 0 ? "Your Logged Meals" : "Recommended Meals"} 
+          subtitle={currentMeals.length > 0 ? `For ${formatDisplayDate(selectedDate)}` : `From your ${culture || 'West African'} food culture`}
+        />
+        
+        {currentMeals.length > 0 ? (
+          currentMeals.map((mealItem, i) => (
+            <WCard key={i} className="reveal-in" style={{ 
+              padding: "var(--card-p)", 
+              marginBottom: "var(--gap-sm)", 
+              animationDelay: `${i * 0.06}s` 
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontWeight: 800, fontSize: "var(--fs-md)" }}>{mealItem.name}</p>
+                  <p style={{ fontSize: "var(--fs-xs)", color: "var(--mt)", marginTop: "var(--sp-1)" }}>
+                    {mealItem.description}
+                  </p>
+                  {mealItem.nutrients && Object.keys(mealItem.nutrients).length > 0 && (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--gap-sm)", marginTop: "var(--sp-2)" }}>
+                      {Object.entries(mealItem.nutrients).map(([key, value]) => (
+                        <Tag key={key} label={`${key}: ${value}`} bg="var(--sgl)" tc="var(--sg)" />
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <button 
+                  onClick={() => handleSwapMeal(mealItem)}
+                  className="btn-tap"
+                  style={{ 
+                    background: "var(--warm)", 
+                    border: "none", 
+                    borderRadius: 20, 
+                    padding: "4px 12px", 
+                    cursor: "pointer",
+                    marginLeft: "var(--sp-2)",
+                    flexShrink: 0
+                  }}
+                >
+                  🔄 Swap
+                </button>
               </div>
+            </WCard>
+          ))
+        ) : (
+          <>
+            {/* Show recommended meals from food database */}
+            {recommendedMeals.length > 0 && (
+              <div style={{ marginBottom: "var(--sp-3)" }}>
+                <p style={{ fontSize: "var(--fs-sm)", color: "var(--mt)", marginBottom: "var(--sp-2)" }}>
+                  💡 Based on your journey ({getJourneyDisplay()}) and culture
+                </p>
+                {recommendedMeals.slice(0, 5).map((mealItem, i) => {
+                  const mealName = typeof mealItem === 'string' ? mealItem : mealItem.name;
+                  const mealDesc = typeof mealItem !== 'string' ? mealItem.dietaryNotes?.join(' ') || '' : '';
+                  const mealNutrients = typeof mealItem !== 'string' ? mealItem.nutrients || [] : [];
+                  
+                  const isAllowed = isFoodAllowed(mealName, dietaryPractices);
+                  
+                  return (
+                    <WCard key={i} className="reveal-in" style={{ 
+                      padding: "var(--card-p)", 
+                      marginBottom: "var(--gap-sm)", 
+                      background: isAllowed ? "var(--lvl)" : "var(--rdl)",
+                      border: `1px solid ${isAllowed ? 'var(--border)44' : 'var(--rdm)44'}`,
+                      animationDelay: `${i * 0.06}s`
+                    }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                        <div style={{ flex: 1 }}>
+                          <p style={{ fontWeight: 700, fontSize: "var(--fs-md)" }}>
+                            {mealName}
+                            {!isAllowed && (
+                              <Tag label="⚠️ May not fit your diet" bg="var(--rdl)" tc="var(--rd)" />
+                            )}
+                          </p>
+                          {mealDesc && (
+                            <p style={{ fontSize: "var(--fs-xs)", color: "var(--mt)", marginTop: "var(--sp-1)" }}>
+                              {mealDesc}
+                            </p>
+                          )}
+                          {mealNutrients.length > 0 && (
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--gap-sm)", marginTop: "var(--sp-2)" }}>
+                              {mealNutrients.map(nutrient => (
+                                <Tag key={nutrient} label={nutrient} bg="var(--sgl)" tc="var(--sg)" />
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <button 
+                          onClick={() => {
+                            if (isAllowed) {
+                              setNewMeal({
+                                name: mealName,
+                                description: mealDesc,
+                                nutrients: {}
+                              });
+                              logMeal();
+                            } else {
+                              handleSwapMeal(mealItem);
+                            }
+                          }}
+                          className="btn-tap"
+                          style={{ 
+                            padding: "4px 12px", 
+                            background: isAllowed ? "var(--sg)" : "var(--warm)",
+                            color: isAllowed ? "#fff" : "var(--text)",
+                            border: "none", 
+                            borderRadius: 20, 
+                            cursor: "pointer",
+                            marginLeft: "var(--sp-2)",
+                            flexShrink: 0
+                          }}
+                        >
+                          {isAllowed ? '+ Log' : '🔄 Swap'}
+                        </button>
+                      </div>
+                    </WCard>
+                  );
+                })}
+              </div>
+            )}
+            
+            {isToday && (
               <button 
-                onClick={() => handleSwapMeal(mealItem)}
+                onClick={() => setShowMealModal(true)}
+                className="btn-tap"
                 style={{ 
-                  background: "var(--warm)", 
+                  padding: "var(--sp-2) var(--sp-4)", 
+                  background: "var(--sg)", 
+                  color: "#fff", 
                   border: "none", 
-                  borderRadius: 20, 
-                  padding: "4px 12px", 
+                  borderRadius: "var(--r)", 
                   cursor: "pointer",
-                  marginLeft: "var(--sp-2)",
-                  flexShrink: 0
+                  width: "100%",
+                  textAlign: "center"
                 }}
               >
-                🔄 Swap
+                + Log a Meal
               </button>
-            </div>
-          </WCard>
-        ))
-      ) : (
-        <WCard style={{ textAlign: "center", padding: "var(--sp-6)" }}>
-          <p style={{ color: "var(--mt)", marginBottom: "var(--sp-3)" }}>
-            No meals logged for {meal === "morning" ? "breakfast" : meal === "afternoon" ? "lunch" : meal === "evening" ? "dinner" : "snacks"} on {formatDisplayDate(selectedDate)}
-          </p>
-          {isToday && (
-            <button 
-              onClick={() => setShowMealModal(true)}
-              style={{ 
-                padding: "var(--sp-2) var(--sp-4)", 
-                background: "var(--sg)", 
-                color: "#fff", 
-                border: "none", 
-                borderRadius: "var(--r)", 
-                cursor: "pointer" 
-              }}
-            >
-              + Log a Meal
-            </button>
-          )}
-          {!isToday && (
-            <p style={{ fontSize: "var(--fs-xs)", color: "var(--mt)" }}>
-              You can only log meals for today
-            </p>
-          )}
-        </WCard>
-      )}
+            )}
+            {!isToday && (
+              <p style={{ fontSize: "var(--fs-xs)", color: "var(--mt)", textAlign: "center" }}>
+                You can only log meals for today
+              </p>
+            )}
+          </>
+        )}
+      </div>
 
-      {/* AI Suggestions Based on REAL Data - NOW FILTERED */}
+      {/* AI Suggestions Based on REAL Data */}
       {filteredMealSuggestions.length > 0 && (
         <>
-          <SectionTitle title="💡 Based on Your Eating Patterns" />
-          <div style={{ display: "flex", gap: "var(--gap-md)", overflowX: "auto", paddingBottom: "var(--sp-2)" }}>
+          <div className="card-in card-in-10">
+            <SectionTitle title="💡 Based on Your Eating Patterns" />
+          </div>
+          <div className="card-in card-in-11" style={{ 
+            display: "flex", 
+            gap: "var(--gap-md)", 
+            overflowX: "auto", 
+            paddingBottom: "var(--sp-2)" 
+          }}>
             {filteredMealSuggestions.map((suggestion, i) => (
-              <WCard key={i} style={{ minWidth: 200, flexShrink: 0 }}>
+              <WCard key={i} className="reveal-in" style={{ 
+                minWidth: 200, 
+                flexShrink: 0, 
+                animationDelay: `${i * 0.06}s` 
+              }}>
                 <p style={{ fontWeight: 800, fontSize: "var(--fs-sm)" }}>{suggestion.name}</p>
                 <p style={{ fontSize: "var(--fs-xs)", color: "var(--mt)", marginTop: "var(--sp-1)" }}>
                   {suggestion.description}
@@ -711,70 +953,149 @@ export default function Nutrition() {
                 {suggestion.basedOn && (
                   <Tag label={`Based on: ${suggestion.basedOn}`} bg="var(--lvl)" tc="var(--mt)" />
                 )}
+                {suggestion.nutrients && suggestion.nutrients.length > 0 && (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--gap-sm)", marginTop: "var(--sp-2)" }}>
+                    {suggestion.nutrients.map(n => (
+                      <Tag key={n} label={n} bg="var(--sgl)" tc="var(--sg)" />
+                    ))}
+                  </div>
+                )}
+                <button 
+                  onClick={() => {
+                    setNewMeal({
+                      name: suggestion.name.replace('Try ', ''),
+                      description: suggestion.description,
+                      nutrients: {}
+                    });
+                    setShowMealModal(true);
+                  }}
+                  className="btn-tap"
+                  style={{ 
+                    marginTop: "var(--sp-2)",
+                    padding: "4px 12px", 
+                    background: "var(--bll)", 
+                    color: "var(--bl)",
+                    border: "none", 
+                    borderRadius: 20, 
+                    cursor: "pointer"
+                  }}
+                >
+                  + Log This
+                </button>
               </WCard>
             ))}
           </div>
         </>
       )}
 
-      {/* Craving Intelligence - Using REAL data */}
-      <SectionTitle title="🍫 Craving Check" />
-      <WCard style={{ marginBottom: "var(--gap-md)" }}>
-        <p style={{ fontSize: "var(--fs-xs)", color: "var(--mt)", marginBottom: "var(--sp-3)" }}>
-          {nutritionalInsights?.daysTracked > 0 
-            ? `Based on ${nutritionalInsights.daysTracked} days of tracked nutrition` 
-            : "Log meals for 7 days to see personalized insights"}
-        </p>
-        <div style={{ display: "flex", gap: "var(--gap-sm)" }}>
-          <input 
-            value={craving} 
-            onChange={e => setCraving(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && analyseCraving()}
-            placeholder="What are you craving? (e.g., chocolate, red meat, ice)" 
-            className="form-input" 
-            style={{ flex: 1, padding: "var(--sp-2)" }}
-          />
-          <button 
-            onClick={analyseCraving}
-            style={{ 
-              padding: "0 var(--sp-4)", 
-              background: "var(--dp)", 
-              color: "#fff", 
-              border: "none", 
-              borderRadius: "var(--r)", 
-              cursor: "pointer" 
-            }}
-          >
-            Check
-          </button>
-        </div>
-        {cravingResult && (
-          <div style={{ marginTop: "var(--sp-3)", padding: "var(--sp-3)", background: "var(--lvl)", borderRadius: "var(--r)" }}>
-            <p style={{ fontWeight: 700 }}>{cravingResult.deficiency}</p>
-            <p style={{ fontSize: "var(--fs-sm)" }}>💡 {cravingResult.food}</p>
-            {cravingResult.noAllowedFoods && (
-              <Tag label="⚠️ Consult a healthcare provider - standard options limited by your diet" bg="var(--rdl)" tc="var(--rd)" />
-            )}
-            {cravingResult.hasRestrictions && !cravingResult.noAllowedFoods && (
-              <Tag label="✨ Filtered to match your preferences" bg="var(--sgl)" tc="var(--sg)" />
-            )}
-            {cravingResult.basedOnData && !cravingResult.hasRestrictions && !cravingResult.noAllowedFoods && (
-              <Tag label="Based on your data" bg="var(--sgl)" tc="var(--sg)" />
-            )}
+      {/* Craving Intelligence */}
+      <div className="card-in card-in-12">
+        <SectionTitle title="🍫 Craving Check" />
+        <WCard style={{ marginBottom: "var(--gap-md)" }}>
+          <p style={{ fontSize: "var(--fs-xs)", color: "var(--mt)", marginBottom: "var(--sp-3)" }}>
+            {nutritionalInsights?.daysTracked > 0 
+              ? `Based on ${nutritionalInsights.daysTracked} days of tracked nutrition` 
+              : "Log meals for 7 days to see personalized insights"}
+          </p>
+          <div style={{ display: "flex", gap: "var(--gap-sm)" }}>
+            <input 
+              value={craving} 
+              onChange={e => setCraving(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && analyseCraving()}
+              placeholder="What are you craving? (e.g., chocolate, red meat, ice)" 
+              className="form-input" 
+              style={{ flex: 1, padding: "var(--sp-2)" }}
+            />
+            <button 
+              onClick={analyseCraving}
+              className="btn-tap"
+              style={{ 
+                padding: "0 var(--sp-4)", 
+                background: "var(--dp)", 
+                color: "#fff", 
+                border: "none", 
+                borderRadius: "var(--r)", 
+                cursor: "pointer" 
+              }}
+            >
+              Check
+            </button>
           </div>
-        )}
-      </WCard>
+          {cravingResult && (
+            <div className="reveal-in" style={{ 
+              marginTop: "var(--sp-3)", 
+              padding: "var(--sp-3)", 
+              background: cravingResult.urgent ? "var(--rdl)" : "var(--lvl)", 
+              borderRadius: "var(--r)" 
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "var(--gap-sm)" }}>
+                <span style={{ fontSize: "var(--fs-xl)" }}>{cravingResult.icon || '🔍'}</span>
+                <p style={{ fontWeight: 700 }}>{cravingResult.deficiency}</p>
+              </div>
+              <p style={{ fontSize: "var(--fs-sm)" }}>💡 {cravingResult.food}</p>
+              {cravingResult.source && (
+                <Tag label={`Source: ${cravingResult.source}`} bg="var(--bll)" tc="var(--bl)" />
+              )}
+              {cravingResult.relatedNutrient && (
+                <Tag label={`Related gap: ${cravingResult.relatedNutrient}`} bg="var(--gdl)" tc="var(--gd)" />
+              )}
+              {cravingResult.urgent && (
+                <Tag label="⚠️ Please consult a healthcare provider" bg="var(--rdl)" tc="var(--rd)" />
+              )}
+            </div>
+          )}
+        </WCard>
+      </div>
+
+      {/* Supplements Tracker */}
+      <div className="card-in card-in-13">
+        <SectionTitle title="💊 Daily Supplements" />
+        <WCard>
+          <div style={{ display: "grid", gap: "var(--gap-sm)" }}>
+            {SUPPS.map((supp, i) => (
+              <div key={i} style={{ 
+                display: "flex", 
+                alignItems: "center", 
+                gap: "var(--gap-md)",
+                padding: "var(--sp-2)",
+                background: supplements[i] ? "var(--sgl)" : "var(--warm)",
+                borderRadius: "var(--r)",
+                border: `1px solid ${supplements[i] ? 'var(--sgm)' : 'var(--border)'}`
+              }}>
+                <input
+                  type="checkbox"
+                  checked={supplements[i] || false}
+                  onChange={() => toggleSupplement(i)}
+                  style={{ width: 20, height: 20, cursor: "pointer" }}
+                />
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontWeight: 700, fontSize: "var(--fs-sm)" }}>{supp.name}</p>
+                  <p style={{ fontSize: "var(--fs-xs)", color: "var(--mt)" }}>{supp.dose} • {supp.time}</p>
+                  <p style={{ fontSize: "var(--fs-2xs)", color: "var(--md)" }}>{supp.benefits}</p>
+                </div>
+                <Tag 
+                  label={supplements[i] ? "✓ Taken" : "Pending"} 
+                  bg={supplements[i] ? "var(--sgl)" : "var(--gdl)"} 
+                  tc={supplements[i] ? "var(--sg)" : "var(--gd)"} 
+                />
+              </div>
+            ))}
+          </div>
+        </WCard>
+      </div>
 
       {/* Meal Logging Modal */}
       {showMealModal && (
         <div
+          className="reveal-in"
           style={{
             position: "fixed",
             top: 0,
             left: 0,
             right: 0,
             bottom: 0,
-            background: "rgba(0,0,0,0.8)",
+            background: "rgba(0,0,0,0.5)",
+            backdropFilter: "blur(4px)",
             zIndex: 2000,
             display: "flex",
             alignItems: "center",
@@ -819,10 +1140,10 @@ export default function Nutrition() {
                 style={{ padding: "var(--sp-2)", borderRadius: "var(--r)", border: "1px solid var(--border)" }}
               />
               <div style={{ display: "flex", gap: "var(--gap-md)", marginTop: "var(--sp-3)" }}>
-                <button onClick={() => setShowMealModal(false)} style={{ flex: 1, padding: "var(--sp-3)" }}>
+                <button onClick={() => setShowMealModal(false)} className="btn-tap" style={{ flex: 1, padding: "var(--sp-3)" }}>
                   Cancel
                 </button>
-                <button onClick={logMeal} style={{ flex: 1, padding: "var(--sp-3)", background: "var(--sg)", color: "#fff", border: "none", borderRadius: "var(--r)" }}>
+                <button onClick={logMeal} className="btn-tap" style={{ flex: 1, padding: "var(--sp-3)", background: "var(--sg)", color: "#fff", border: "none", borderRadius: "var(--r)" }}>
                   Save Meal
                 </button>
               </div>
@@ -834,13 +1155,15 @@ export default function Nutrition() {
       {/* Swap Modal */}
       {showSwapModal && swapOption && (
         <div
+          className="reveal-in"
           style={{
             position: "fixed",
             top: 0,
             left: 0,
             right: 0,
             bottom: 0,
-            background: "rgba(0,0,0,0.8)",
+            background: "rgba(0,0,0,0.5)",
+            backdropFilter: "blur(4px)",
             zIndex: 2000,
             display: "flex",
             alignItems: "center",
@@ -850,22 +1173,31 @@ export default function Nutrition() {
           onClick={e => e.target === e.currentTarget && setShowSwapModal(false)}
         >
           <div style={{ background: "var(--card)", borderRadius: "var(--r2)", maxWidth: 400, width: "100%", padding: "var(--sp-5)" }}>
-            <h3 style={{ marginBottom: "var(--sp-3)" }}>Swap {selectedMealItem?.name}</h3>
+            <h3 style={{ marginBottom: "var(--sp-3)" }}>Swap {typeof selectedMealItem === 'string' ? selectedMealItem : selectedMealItem?.name}</h3>
             <div style={{ marginBottom: "var(--sp-4)" }}>
               <p style={{ fontWeight: 700 }}>{swapOption.name}</p>
               <p style={{ fontSize: "var(--fs-xs)", color: "var(--mt)" }}>{swapOption.prep}</p>
+              {swapOption.alternatives && (
+                <Tag label={`Options: ${swapOption.alternatives}`} bg="var(--bll)" tc="var(--bl)" />
+              )}
             </div>
             <div style={{ display: "flex", gap: "var(--gap-md)" }}>
-              <button onClick={() => setShowSwapModal(false)} style={{ flex: 1, padding: "var(--sp-3)" }}>
+              <button onClick={() => setShowSwapModal(false)} className="btn-tap" style={{ flex: 1, padding: "var(--sp-3)" }}>
                 Cancel
               </button>
-              <button onClick={handleApplySwap} style={{ flex: 1, padding: "var(--sp-3)", background: "var(--sg)", color: "#fff", border: "none", borderRadius: "var(--r)" }}>
+              <button onClick={handleApplySwap} className="btn-tap" style={{ flex: 1, padding: "var(--sp-3)", background: "var(--sg)", color: "#fff", border: "none", borderRadius: "var(--r)" }}>
                 Save Swap
               </button>
             </div>
           </div>
         </div>
       )}
+
+      <style>{`
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }

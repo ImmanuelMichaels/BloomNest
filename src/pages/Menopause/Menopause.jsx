@@ -1,5 +1,5 @@
 // Menopause.jsx — Final merged version
-// v1 full render tree + all audit fixes from v2/v3/v4
+// v1 full render tree + all audit fixes from v2/v3/v4 + RangeSlider/motion pass
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
@@ -8,6 +8,8 @@ import {
   Battery, BookOpen, Footprints, Bed, Phone, Shield, Smile, Zap,
   Leaf, Fish, Coffee, Apple, CloudRain, Droplet, Edit2, Plus,
 } from 'lucide-react';
+import RangeSlider from '../../components/ui/RangeSlider';
+import '../../styles/motion.css';
 import './Menopause.css';
 import { useApp } from '../../context/useApp';
 
@@ -230,7 +232,6 @@ function SectionLabel({ children }) {
 }
 
 function SymptomSeverity({ symptom, value, onChange, accent }) {
-  const levels = [0, 1, 2, 3];
   const levelLabels = ['None', 'Mild', 'Moderate', 'Severe'];
   const levelColors = ['#E2E8F0', '#F6C90E', '#F5924E', '#E05252'];
   return (
@@ -242,20 +243,16 @@ function SymptomSeverity({ symptom, value, onChange, accent }) {
           <p className="mn-symptom-level" style={{ color: levelColors[value] }}>{levelLabels[value]}</p>
         </div>
       </div>
-      <div className="mn-severity-dots">
-        {levels.map(l => (
-          <button
-            key={l}
-            className="mn-dot"
-            aria-label={`Set ${symptom.label} to ${levelLabels[l]}`}
-            style={{
-              background: l <= value ? levelColors[value] : '#E2E8F0',
-              transform: l === value ? 'scale(1.25)' : 'scale(1)',
-              boxShadow: l === value ? `0 0 0 2px ${accent}44` : 'none',
-            }}
-            onClick={() => onChange(l)}
-          />
-        ))}
+      <div style={{ width: 150 }}>
+        <RangeSlider
+          value={value}
+          onChange={onChange}
+          min={0}
+          max={3}
+          step={1}
+          formatValue={v => levelLabels[v]}
+          accent={levelColors[value]}
+        />
       </div>
     </div>
   );
@@ -265,7 +262,7 @@ function ClothingBadge({ advice }) {
   const [expanded, setExpanded] = useState(false);
   return (
     <div className="mn-clothing-card" style={{ background: advice.bg, borderColor: advice.color + '33' }}>
-      <div className="mn-clothing-header" onClick={() => setExpanded(v => !v)}>
+      <div className="mn-clothing-header btn-tap" onClick={() => setExpanded(v => !v)}>
         <div className="mn-clothing-icon" style={{ background: advice.color + '22', color: advice.color }}>
           {advice.icon}
         </div>
@@ -279,7 +276,7 @@ function ClothingBadge({ advice }) {
         />
       </div>
       {expanded && (
-        <div className="mn-clothing-body">
+        <div className="mn-clothing-body reveal-in">
           <p className="mn-clothing-tip">{advice.tip}</p>
           <div className="mn-clothing-cols">
             <div>
@@ -316,7 +313,7 @@ function MentalTipCard({ tip }) {
 
 function StatPill({ icon, value, label, accent, empty, onClick }) {
   return (
-    <div className="mn-stat-pill" onClick={onClick} style={{ cursor: onClick ? 'pointer' : 'default' }}>
+    <div className="mn-stat-pill btn-tap" onClick={onClick} style={{ cursor: onClick ? 'pointer' : 'default' }}>
       <div className="mn-stat-icon" style={{ color: accent }}>{icon}</div>
       <p className="mn-stat-value" style={{ color: empty ? '#bbb' : accent }}>{value}</p>
       <p className="mn-stat-label">{label}</p>
@@ -397,7 +394,7 @@ function CycleWeekRow({ days, onToggle, accent }) {
       {days.map((d, i) => (
         <div
           key={`${d.day}-${i}`}
-          className="mn-cycle-day"
+          className="mn-cycle-day btn-tap"
           onClick={() => onToggle(i)}
           role="button"
           tabIndex={0}
@@ -423,17 +420,22 @@ function CycleWeekRow({ days, onToggle, accent }) {
 function HormoneInputModal({ hormones, onSave, onClose, accent }) {
   const [draft, setDraft] = useState({ ...hormones });
   const [errors, setErrors] = useState({});
+  const [enabled, setEnabled] = useState(() => {
+    const initial = {};
+    HORMONE_FIELDS.forEach(f => { initial[f.key] = hormones[f.key] != null; });
+    return initial;
+  });
 
   const validateAndSave = () => {
     const newErrors = {};
     const safeDraft = {};
 
     HORMONE_FIELDS.forEach(f => {
+      if (!enabled[f.key]) { safeDraft[f.key] = null; return; }
       const raw = draft[f.key];
       if (raw === null || raw === '' || raw === undefined) { safeDraft[f.key] = null; return; }
       const num = parseFloat(raw);
       if (isNaN(num)) { newErrors[f.key] = 'Please enter a valid number'; safeDraft[f.key] = null; return; }
-      if (num < f.min || num > f.max) newErrors[f.key] = `Value must be between ${f.min} and ${f.max}`;
       safeDraft[f.key] = Math.min(f.max, Math.max(f.min, num));
     });
 
@@ -444,31 +446,47 @@ function HormoneInputModal({ hormones, onSave, onClose, accent }) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: '#0006', zIndex: 200, display: 'flex', alignItems: 'flex-end' }} onClick={onClose}>
-      <div style={{ width: '100%', background: '#fff', borderRadius: '20px 20px 0 0', padding: '24px 20px 40px', maxHeight: '80vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+      <div className="card-in" style={{ width: '100%', background: '#fff', borderRadius: '20px 20px 0 0', padding: '24px 20px 40px', maxHeight: '80vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
         <p style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>🧬 Enter Blood Test Results</p>
-        <p style={{ fontSize: 12, color: '#888', marginBottom: 20 }}>Copy values from your latest blood test. Leave blank if not available.</p>
+        <p style={{ fontSize: 12, color: '#888', marginBottom: 20 }}>Toggle a marker on and drag to match your latest blood test. Leave off if not available.</p>
         {HORMONE_FIELDS.map(f => (
-          <div key={f.key} style={{ marginBottom: 16 }}>
-            <label style={{ fontSize: 13, color: '#555', display: 'block', marginBottom: 4 }}>
-              {f.label} <span style={{ color: '#aaa' }}>({f.unit})</span>
-            </label>
-            <input
-              type="number" step="0.1" min={f.min} max={f.max}
-              value={draft[f.key] ?? ''}
-              onChange={e => {
-                const val = e.target.value;
-                setDraft(prev => ({ ...prev, [f.key]: val === '' ? null : val }));
-                if (errors[f.key]) setErrors(prev => ({ ...prev, [f.key]: undefined }));
-              }}
-              placeholder={`e.g. ${f.max * 0.25}`}
-              style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: `1.5px solid ${errors[f.key] ? '#E05252' : '#e0e0e0'}`, fontSize: 14, boxSizing: 'border-box' }}
-            />
+          <div key={f.key} style={{ marginBottom: 18, opacity: enabled[f.key] ? 1 : 0.5 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+              <label style={{ fontSize: 13, color: '#555' }}>
+                {f.label} <span style={{ color: '#aaa' }}>({f.unit})</span>
+              </label>
+              <button
+                type="button"
+                className="btn-tap"
+                onClick={() => {
+                  setEnabled(prev => ({ ...prev, [f.key]: !prev[f.key] }));
+                  if (draft[f.key] == null) setDraft(prev => ({ ...prev, [f.key]: Math.round(f.max * 0.25) }));
+                }}
+                style={{ background: enabled[f.key] ? accent : '#eee', color: enabled[f.key] ? '#fff' : '#888', border: 'none', borderRadius: 20, padding: '3px 12px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
+              >
+                {enabled[f.key] ? 'Included' : 'Not entered'}
+              </button>
+            </div>
+            {enabled[f.key] && (
+              <RangeSlider
+                value={draft[f.key] != null ? Number(draft[f.key]) : Math.round(f.max * 0.25)}
+                onChange={v => {
+                  setDraft(prev => ({ ...prev, [f.key]: v }));
+                  if (errors[f.key]) setErrors(prev => ({ ...prev, [f.key]: undefined }));
+                }}
+                min={f.min}
+                max={f.max}
+                step={0.1}
+                unit={` ${f.unit}`}
+                accent={f.color}
+              />
+            )}
             {errors[f.key] && <p style={{ fontSize: 12, color: '#E05252', marginTop: 4 }}>{errors[f.key]}</p>}
           </div>
         ))}
         <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
-          <button onClick={validateAndSave} style={{ flex: 1, background: accent, color: '#fff', border: 'none', borderRadius: 12, padding: '12px 0', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>Save Results</button>
-          <button onClick={onClose} style={{ flex: 1, background: '#f0f0f0', color: '#555', border: 'none', borderRadius: 12, padding: '12px 0', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>Cancel</button>
+          <button className="btn-tap" onClick={validateAndSave} style={{ flex: 1, background: accent, color: '#fff', border: 'none', borderRadius: 12, padding: '12px 0', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>Save Results</button>
+          <button className="btn-tap" onClick={onClose} style={{ flex: 1, background: '#f0f0f0', color: '#555', border: 'none', borderRadius: 12, padding: '12px 0', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>Cancel</button>
         </div>
       </div>
     </div>
@@ -477,19 +495,12 @@ function HormoneInputModal({ hormones, onSave, onClose, accent }) {
 
 // ─── SLEEP & HYDRATION MODAL ─────────────────────────────────────────────────
 function SleepHydrationModal({ sleepHours, hydrationGlasses, onSave, onClose, accent }) {
-  const [sleep, setSleep] = useState(sleepHours ?? '');
+  const [sleep, setSleep] = useState(sleepHours ?? 7);
   const [hydration, setHydration] = useState(hydrationGlasses ?? '');
-  const [sleepError, setSleepError] = useState('');
+  const [sleepLogged, setSleepLogged] = useState(sleepHours != null);
 
   const validateAndSave = () => {
-    let hrs = null;
-    if (sleep !== '' && sleep !== null && sleep !== undefined) {
-      const parsed = parseFloat(sleep);
-      if (isNaN(parsed)) { setSleepError('Please enter a valid number'); return; }
-      if (parsed < 0 || parsed > 24) { setSleepError('Sleep must be between 0 and 24 hours'); return; }
-      hrs = parsed;
-    }
-    setSleepError('');
+    const hrs = sleepLogged ? Math.min(14, Math.max(0, Number(sleep))) : null;
     const h = (hydration !== '' && !isNaN(parseInt(hydration))) ? Math.min(8, Math.max(0, parseInt(hydration))) : null;
     onSave({ sleepHours: hrs, hydrationGlasses: h });
     onClose();
@@ -497,24 +508,32 @@ function SleepHydrationModal({ sleepHours, hydrationGlasses, onSave, onClose, ac
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: '#0006', zIndex: 200, display: 'flex', alignItems: 'flex-end' }} onClick={onClose}>
-      <div style={{ width: '100%', background: '#fff', borderRadius: '20px 20px 0 0', padding: '24px 20px 40px' }} onClick={e => e.stopPropagation()}>
+      <div className="card-in" style={{ width: '100%', background: '#fff', borderRadius: '20px 20px 0 0', padding: '24px 20px 40px' }} onClick={e => e.stopPropagation()}>
         <p style={{ fontWeight: 700, fontSize: 15, marginBottom: 16 }}>📊 Log Sleep & Hydration</p>
 
-        <label style={{ fontSize: 13, color: '#555', display: 'block', marginBottom: 4 }}>😴 Sleep last night (hours)</label>
-        <input
-          type="number" step="0.5" min="0" max="24"
-          value={sleep}
-          onChange={e => { setSleep(e.target.value); setSleepError(''); }}
-          placeholder="e.g. 7"
-          style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: `1.5px solid ${sleepError ? '#E05252' : '#e0e0e0'}`, fontSize: 14, boxSizing: 'border-box', marginBottom: sleepError ? 4 : 16 }}
-        />
-        {sleepError && <p style={{ fontSize: 12, color: '#E05252', marginBottom: 12 }}>{sleepError}</p>}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+          <label style={{ fontSize: 13, color: '#555' }}>😴 Sleep last night</label>
+          <button
+            type="button"
+            className="btn-tap"
+            onClick={() => setSleepLogged(v => !v)}
+            style={{ background: sleepLogged ? accent : '#eee', color: sleepLogged ? '#fff' : '#888', border: 'none', borderRadius: 20, padding: '3px 12px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
+          >
+            {sleepLogged ? 'Logged' : 'Not logged'}
+          </button>
+        </div>
+        {sleepLogged && (
+          <div style={{ marginBottom: 12, opacity: 1 }}>
+            <RangeSlider value={Number(sleep)} onChange={setSleep} min={0} max={14} step={0.5} unit="h" accent={accent} />
+          </div>
+        )}
 
-        <label style={{ fontSize: 13, color: '#555', display: 'block', marginBottom: 4 }}>💧 Water glasses today (out of 8)</label>
+        <label style={{ fontSize: 13, color: '#555', display: 'block', marginBottom: 4, marginTop: 8 }}>💧 Water glasses today (out of 8)</label>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20 }}>
           {[1,2,3,4,5,6,7,8].map(n => (
             <button
               key={n}
+              className="choice-chip"
               onClick={() => setHydration(n)}
               style={{ width: 40, height: 40, borderRadius: '50%', border: '2px solid', borderColor: hydration >= n ? accent : '#e0e0e0', background: hydration >= n ? accent + '22' : '#fff', color: hydration >= n ? accent : '#aaa', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}
             >
@@ -524,8 +543,8 @@ function SleepHydrationModal({ sleepHours, hydrationGlasses, onSave, onClose, ac
         </div>
 
         <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={validateAndSave} style={{ flex: 1, background: accent, color: '#fff', border: 'none', borderRadius: 12, padding: '12px 0', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>Save</button>
-          <button onClick={onClose} style={{ flex: 1, background: '#f0f0f0', color: '#555', border: 'none', borderRadius: 12, padding: '12px 0', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>Cancel</button>
+          <button className="btn-tap" onClick={validateAndSave} style={{ flex: 1, background: accent, color: '#fff', border: 'none', borderRadius: 12, padding: '12px 0', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>Save</button>
+          <button className="btn-tap" onClick={onClose} style={{ flex: 1, background: '#f0f0f0', color: '#555', border: 'none', borderRadius: 12, padding: '12px 0', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}>Cancel</button>
         </div>
       </div>
     </div>
@@ -683,7 +702,7 @@ export default function Menopause({ setTab }) {
         {Object.entries(STAGES).map(([key, s]) => (
           <button
             key={key}
-            className={`mn-stage-btn ${stage === key ? 'mn-stage-btn--active' : ''}`}
+            className={`mn-stage-btn choice-chip ${stage === key ? 'mn-stage-btn--active choice-chip--selected' : ''}`}
             style={stage === key
               ? { background: s.accent, color: '#fff', borderColor: s.accent }
               : { borderColor: s.accent + '55', color: s.accent }
@@ -697,7 +716,7 @@ export default function Menopause({ setTab }) {
       </div>
 
       {/* Hero Banner */}
-      <div className="mn-hero" style={{ background: `linear-gradient(135deg, ${meta.accentSoft}, #FFF9FE)` }}>
+      <div className="mn-hero card-in" style={{ background: `linear-gradient(135deg, ${meta.accentSoft}, #FFF9FE)` }}>
         <div className="mn-hero-left">
           <div className="mn-hero-badge" style={{ background: meta.accent + '22', color: meta.accent }}>
             <span>{meta.emoji}</span> {meta.label}
@@ -711,7 +730,7 @@ export default function Menopause({ setTab }) {
       </div>
 
       {/* Stats Row — per-pill onClick */}
-      <div className="mn-stats-row">
+      <div className="mn-stats-row card-in card-in-1">
         <StatPill icon={<Thermometer size={16} />} value={avgTemp ? `${avgTemp}°` : '—'} label="Avg Temp"   accent={meta.accent}  empty={!avgTemp} />
         <StatPill icon={<Flame size={16} />}        value={`${symptoms.hotFlash}/3`}       label="Hot Flashes" accent="#E07B39" />
         <StatPill icon={<Moon size={16} />}         value={sleepHydration.sleepHours != null ? `${sleepHydration.sleepHours}h` : '—'} label="Sleep" accent="#5B6ABF" empty={sleepHydration.sleepHours == null} onClick={() => setShowSleepModal(true)} />
@@ -725,9 +744,9 @@ export default function Menopause({ setTab }) {
       <ClothingBadge advice={clothing} />
 
       {/* Symptom Logger */}
-      <div className="hm-card">
+      <div className="hm-card card-in card-in-2">
         <SectionLabel>📊 TODAY'S SYMPTOMS</SectionLabel>
-        <p className="mn-section-sub">Tap the dots to log severity.</p>
+        <p className="mn-section-sub">Drag to log severity.</p>
         <div className="mn-symptom-list">
           {SYMPTOMS.map(s => (
             <SymptomSeverity key={s.id} symptom={s} value={symptoms[s.key]} onChange={val => updateSymptom(s.key, val)} accent={meta.accent} />
@@ -736,13 +755,13 @@ export default function Menopause({ setTab }) {
       </div>
 
       {/* Mood Check */}
-      <div className="hm-card">
+      <div className="hm-card card-in card-in-3">
         <SectionLabel>💜 HOW ARE YOU FEELING RIGHT NOW?</SectionLabel>
         <div className="mn-mood-grid">
           {MOODS.map(m => (
             <button
               key={m.label}
-              className={`mn-mood-btn ${moodState?.label === m.label ? 'mn-mood-btn--on' : ''}`}
+              className={`mn-mood-btn choice-chip ${moodState?.label === m.label ? 'mn-mood-btn--on choice-chip--selected' : ''}`}
               style={moodState?.label === m.label ? { borderColor: meta.accent, background: meta.accentSoft } : {}}
               onClick={() => setMoodState(m)}
             >
@@ -752,7 +771,7 @@ export default function Menopause({ setTab }) {
           ))}
         </div>
         {moodState && (
-          <div className="mn-mood-fb" style={{ background: meta.accentSoft }}>
+          <div className="mn-mood-fb reveal-in" style={{ background: meta.accentSoft }}>
             <span style={{ color: meta.accent, fontWeight: 700 }}>Feeling {moodState.label} logged ✓</span>
             <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--md)', marginTop: 4 }}>
               {moodState.label === 'Flushed'   && 'Try removing a layer, sip cold water, and try the 4-7-8 breath.'}
@@ -767,11 +786,12 @@ export default function Menopause({ setTab }) {
       </div>
 
       {/* Hormone Panel */}
-      <div className="hm-card">
+      <div className="hm-card card-in card-in-4">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
           <SectionLabel>HORMONE REFERENCE PANEL 🧬</SectionLabel>
           <button
             onClick={() => setShowHormoneModal(true)}
+            className="btn-tap"
             style={{ background: meta.accent + '18', color: meta.accent, border: 'none', borderRadius: 10, padding: '5px 10px', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}
           >
             <Edit2 size={12} /> Edit
@@ -781,7 +801,7 @@ export default function Menopause({ setTab }) {
         {HORMONE_FIELDS.every(f => hormones[f.key] == null) ? (
           <div style={{ background: '#f9f6ff', borderRadius: 12, padding: 16, textAlign: 'center', border: '1.5px dashed #d0b8f0', marginTop: 8 }}>
             <p style={{ fontSize: 13, color: '#999', marginBottom: 8 }}>No blood test results entered yet</p>
-            <button onClick={() => setShowHormoneModal(true)} style={{ background: meta.accent, color: '#fff', border: 'none', borderRadius: 10, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>+ Add Results</button>
+            <button className="btn-tap" onClick={() => setShowHormoneModal(true)} style={{ background: meta.accent, color: '#fff', border: 'none', borderRadius: 10, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>+ Add Results</button>
           </div>
         ) : (
           <div className="mn-hbar-list">
@@ -794,7 +814,7 @@ export default function Menopause({ setTab }) {
       </div>
 
       {/* Temperature Trend */}
-      <div className="hm-card">
+      <div className="hm-card card-in card-in-5">
         <SectionLabel>BODY TEMPERATURE — RECENT TREND 🌡️</SectionLabel>
         {tempLog.length === 0 ? (
           <div style={{ background: '#f9f9f9', borderRadius: 12, padding: 16, textAlign: 'center', border: '1.5px dashed #e0e0e0', marginBottom: 12 }}>
@@ -818,17 +838,24 @@ export default function Menopause({ setTab }) {
             })}
           </div>
         )}
-        <div className="mn-temp-input-row">
-          <input
-            type="number" step="0.1" min="35" max="42"
-            value={tempInput}
-            placeholder="Log today's temp (°C)"
-            onChange={e => { setTempInput(e.target.value); setTempError(''); }}
-            onBlur={() => { addTemperature(tempInput); setTempInput(''); }}
-            onKeyDown={e => { if (e.key === 'Enter') { addTemperature(tempInput); setTempInput(''); } }}
-            aria-label="Enter body temperature in Celsius"
-            className="mn-temp-input"
+        <div className="mn-temp-input-row" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 8 }}>
+          <RangeSlider
+            label="Log today's temperature"
+            value={tempInput === '' ? 36.5 : parseFloat(tempInput)}
+            onChange={v => { setTempInput(String(v)); setTempError(''); }}
+            min={35}
+            max={42}
+            step={0.1}
+            unit="°C"
+            accent={meta.accent}
           />
+          <button
+            className="btn-tap"
+            onClick={() => { addTemperature(tempInput === '' ? 36.5 : tempInput); setTempInput(''); }}
+            style={{ alignSelf: 'flex-start', background: meta.accent, color: '#fff', border: 'none', borderRadius: 10, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+          >
+            + Log Temperature
+          </button>
         </div>
         {tempError && <p style={{ color: '#E05252', fontSize: 13, marginTop: 4 }}>{tempError}</p>}
         {tempLog.length > 0 && (
@@ -841,7 +868,7 @@ export default function Menopause({ setTab }) {
 
       {/* Menstrual Cycle (Perimenopause only) */}
       {stage === 'perimenopause' && (
-        <div className="hm-card">
+        <div className="hm-card card-in card-in-6">
           <SectionLabel>MENSTRUAL TRACKING</SectionLabel>
           <p className="mn-section-sub">Tap a day to cycle through: none → light → period.</p>
           <CycleWeekRow days={cycleWeek} onToggle={toggleCycleDay} accent={meta.accent} />
@@ -851,6 +878,7 @@ export default function Menopause({ setTab }) {
             <span className="mn-leg-dot" style={{ background: PHASE_COLOR.none, marginLeft: 12 }} /> None
           </div>
           <button
+            className="btn-tap"
             onClick={markPeriodToday}
             disabled={periods.includes(today)}
             style={{ marginTop: 10, background: periods.includes(today) ? '#f0f0f0' : meta.accent, color: periods.includes(today) ? '#aaa' : '#fff', border: 'none', borderRadius: 10, padding: '8px 16px', fontSize: 13, fontWeight: 600, cursor: periods.includes(today) ? 'default' : 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
@@ -879,7 +907,7 @@ export default function Menopause({ setTab }) {
       )}
 
       {/* AI Insight */}
-      <div className="hm-card" style={{ background: 'linear-gradient(135deg, #F8F4FF, #FFF9FE)' }}>
+      <div className="hm-card card-in card-in-7" style={{ background: 'linear-gradient(135deg, #F8F4FF, #FFF9FE)' }}>
         <SectionLabel>✨ YOUR AI INSIGHT</SectionLabel>
         <div className="mn-ai-wrap">
           <span style={{ fontSize: 36 }}>🤖</span>
@@ -889,7 +917,7 @@ export default function Menopause({ setTab }) {
           </div>
         </div>
         <button
-          className="mn-ask-bloom-btn"
+          className="mn-ask-bloom-btn btn-tap"
           style={{ background: meta.accent, color: '#fff', border: 'none', borderRadius: 20, padding: '8px 18px', cursor: 'pointer', fontSize: 13, marginTop: 10 }}
           onClick={() => setTab('chat')}
         >
@@ -898,26 +926,26 @@ export default function Menopause({ setTab }) {
       </div>
 
       {/* Mental Health Tips */}
-      <div className="hm-card">
+      <div className="hm-card card-in card-in-8">
         <SectionLabel>MENTAL HEALTH SUPPORT 🧠</SectionLabel>
         <p className="mn-section-sub">Evidence-based strategies tailored to your symptoms today.</p>
-        <div className="mn-mental-list">
+        <div className="mn-mental-list tab-panel" key={showAllTips ? 'all' : 'few'}>
           {visibleTips.map(tip => <MentalTipCard key={tip.id} tip={tip} />)}
         </div>
-        <button className="hm-view-all" style={{ color: meta.accent }} onClick={() => setShowAllTips(v => !v)}>
+        <button className="hm-view-all btn-tap" style={{ color: meta.accent }} onClick={() => setShowAllTips(v => !v)}>
           {showAllTips ? 'Show fewer tips ↑' : `See all ${MENTAL_TIPS.length} strategies →`}
         </button>
       </div>
 
       {/* Daily Checklist */}
-      <div className="hm-card">
+      <div className="hm-card card-in">
         <div className="hm-checklist-header" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
           <SectionLabel>DAILY WELLNESS CHECKLIST ☀️</SectionLabel>
           <ChecklistRingProgress percentage={checklistPct} accent={meta.accent} size={60} />
         </div>
         <div style={{ marginTop: 16 }}>
           {checklist.map(c => (
-            <button key={c.id} className="hm-check-row" onClick={() => toggleCheck(c.id)}>
+            <button key={c.id} className="hm-check-row btn-tap" onClick={() => toggleCheck(c.id)}>
               {c.done
                 ? <CheckCircle2 size={20} color={meta.accent} strokeWidth={2} />
                 : <Circle size={20} color="#ccc" strokeWidth={2} />
@@ -929,7 +957,7 @@ export default function Menopause({ setTab }) {
       </div>
 
       {/* Nutrition */}
-      <div className="hm-card">
+      <div className="hm-card card-in">
         <SectionLabel>NUTRITION FOCUS FOR {meta.label.toUpperCase()} 🥗</SectionLabel>
         <div className="mn-nutrition-grid">
           {NUTRITION_ITEMS.map((n, i) => (
@@ -943,7 +971,7 @@ export default function Menopause({ setTab }) {
       </div>
 
       {/* HRT Information */}
-      <div className="hm-card" style={{ borderLeft: `4px solid ${meta.accent}` }}>
+      <div className="hm-card card-in" style={{ borderLeft: `4px solid ${meta.accent}` }}>
         <SectionLabel>HRT & TREATMENT OPTIONS 💊</SectionLabel>
         <div className="mn-hrt-list">
           {[
@@ -964,17 +992,17 @@ export default function Menopause({ setTab }) {
       </div>
 
       {/* Crisis Support */}
-      <div className="hm-card" style={{ background: '#FFF5F5' }}>
+      <div className="hm-card card-in" style={{ background: '#FFF5F5' }}>
         <SectionLabel>MENTAL HEALTH CRISIS SUPPORT 🆘</SectionLabel>
         <p className="mn-section-sub" style={{ marginBottom: 12 }}>Menopausal hormone changes can trigger or worsen depression. You are never alone.</p>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <a href="tel:116123" style={{ background: '#C0516A', color: '#fff', padding: '8px 16px', borderRadius: 20, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 14 }}>
+          <a href="tel:116123" className="btn-tap" style={{ background: '#C0516A', color: '#fff', padding: '8px 16px', borderRadius: 20, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 14 }}>
             <Phone size={16} /> Samaritans 116 123
           </a>
-          <a href="tel:111" style={{ background: '#7C5CBF', color: '#fff', padding: '8px 16px', borderRadius: 20, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 14 }}>
+          <a href="tel:111" className="btn-tap" style={{ background: '#7C5CBF', color: '#fff', padding: '8px 16px', borderRadius: 20, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 14 }}>
             <Shield size={16} /> NHS 111
           </a>
-          <button onClick={() => setShowSOS(true)} style={{ background: '#3A8A6E', color: '#fff', border: 'none', borderRadius: 20, padding: '8px 16px', cursor: 'pointer', fontSize: 14 }}>
+          <button className="btn-tap" onClick={() => setShowSOS(true)} style={{ background: '#3A8A6E', color: '#fff', border: 'none', borderRadius: 20, padding: '8px 16px', cursor: 'pointer', fontSize: 14 }}>
             🆘 SOS
           </button>
         </div>

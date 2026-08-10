@@ -1,6 +1,16 @@
-// data/foods.js
+// src/data/supplements.js
+// ─── FACADE LAYER ─────────────────────────────────────────────────────────────
+// This file maintains backward compatibility with existing imports.
+// All food data now lives in src/data/foods/
 
-// Daily Supplements
+// ─── Imports from new food database ──────────────────────────────────────────
+import { getCulturalMeal, getFoodsForJourney as getJourneyFoods } from './foods/resolver';
+import { FOODS as NEW_FOODS } from './foods/foods';
+import { MEAL_TYPES } from './foods/types';
+
+// ─── Legacy data (preserved from original supplements.js) ────────────────────
+
+// Daily Supplements (unchanged from original)
 export const SUPPS = [
   { name: "Folic Acid", dose: "400–600 mcg", time: "With breakfast", col: ["#E3F5EA", "#5A9E6E"], benefits: "Prevents neural tube defects. Essential in first trimester." },
   { name: "DHA / Omega-3", dose: "200–300 mg", time: "With largest meal", col: ["#E4EFF9", "#3A78C4"], benefits: "Supports baby's brain and eye development." },
@@ -12,121 +22,79 @@ export const SUPPS = [
   { name: "Zinc", dose: "15–30 mg", time: "With food", col: ["#FDE8F0", "#D63A6E"], benefits: "Supports immune function and cell growth." }
 ];
 
-// Pregnancy-Specific Meal Plans
+// ─── Legacy FOODS (meal plans) - preserved for backward compatibility ────
+// These are used by getMeals() below. The new food database provides richer data.
 export const FOODS = {
   morning: [
-    { 
-      e: "🥣", 
-      name: "Akamu (Pap) with Akara", 
-      b: "Fermented corn pudding with bean cakes. Excellent for sustained energy and protein.", 
-      tags: ["Protein", "Energy", "Traditional"],
-      nutrients: ["Protein 12g", "Iron 3mg", "Folate 150mcg"],
-      prepTime: "15 mins"
-    },
-    { 
-      e: "🥣", 
-      name: "Moi Moi with Oats", 
-      b: "Steamed bean pudding with blended oats. High in protein and folate.", 
-      tags: ["High Protein", "Folate Rich", "Filling"],
-      nutrients: ["Protein 18g", "Folate 200mcg", "Fiber 8g"],
-      prepTime: "45 mins (soak beans overnight)"
-    },
-    { 
-      e: "🍳", 
-      name: "Scrambled Eggs with Ugu", 
-      b: "Eggs with fluted pumpkin leaves. Fast, nutritious, iron-rich breakfast.", 
-      tags: ["Quick", "Iron Rich", "Low Carb"],
-      nutrients: ["Protein 14g", "Iron 4mg", "Vitamin A 200%"],
-      prepTime: "10 mins"
-    },
-    { 
-      e: "🌾", 
-      name: "Oatmeal with Tiger Nuts (Aya)", 
-      b: "Oats with ground tiger nuts and honey. High calcium, great for bones.", 
-      tags: ["High Calcium", "Energy", "Fiber"],
-      nutrients: ["Calcium 200mg", "Fiber 7g", "Iron 3mg"],
-      prepTime: "10 mins"
-    }
+    { e: "🥣", name: "Akamu (Pap) with Akara", b: "Fermented corn pudding with bean cakes. Excellent for sustained energy and protein.", tags: ["Protein", "Energy", "Traditional"], nutrients: ["Protein 12g", "Iron 3mg", "Folate 150mcg"], prepTime: "15 mins" },
+    { e: "🥣", name: "Moi Moi with Oats", b: "Steamed bean pudding with blended oats. High in protein and folate.", tags: ["High Protein", "Folate Rich", "Filling"], nutrients: ["Protein 18g", "Folate 200mcg", "Fiber 8g"], prepTime: "45 mins (soak beans overnight)" },
+    { e: "🍳", name: "Scrambled Eggs with Ugu", b: "Eggs with fluted pumpkin leaves. Fast, nutritious, iron-rich breakfast.", tags: ["Quick", "Iron Rich", "Low Carb"], nutrients: ["Protein 14g", "Iron 4mg", "Vitamin A 200%"], prepTime: "10 mins" },
+    { e: "🌾", name: "Oatmeal with Tiger Nuts (Aya)", b: "Oats with ground tiger nuts and honey. High calcium, great for bones.", tags: ["High Calcium", "Energy", "Fiber"], nutrients: ["Calcium 200mg", "Fiber 7g", "Iron 3mg"], prepTime: "10 mins" }
   ],
   afternoon: [
-    { 
-      e: "🍚", 
-      name: "Jollof Rice with Grilled Fish", 
-      b: "Tomato-based rice with tilapia. Rich in lycopene and omega-3s.", 
-      tags: ["Omega-3", "Iron", "Balanced"],
-      nutrients: ["Omega-3 1.2g", "Protein 25g", "Iron 4mg"],
-      prepTime: "45 mins"
-    },
-    { 
-      e: "🥣", 
-      name: "Efo Riro (Spinach Stew) with Rice", 
-      b: "Rich spinach and assorted meat stew. Excellent iron source for pregnancy.", 
-      tags: ["Iron Rich", "Folate", "Traditional"],
-      nutrients: ["Iron 8mg", "Folate 300mcg", "Protein 20g"],
-      prepTime: "60 mins"
-    },
-    { 
-      e: "🍲", 
-      name: "Egusi Soup with Pounded Yam", 
-      b: "Melon seed soup with leafy greens. High in zinc and healthy fats.", 
-      tags: ["Zinc Rich", "Healthy Fats", "Comfort Food"],
-      nutrients: ["Zinc 5mg", "Healthy Fats 15g", "Protein 18g"],
-      prepTime: "60 mins"
-    },
-    { 
-      e: "🥗", 
-      name: "Okro Soup with Fish", 
-      b: "Okra and fish soup. Great for digestion and iron absorption.", 
-      tags: ["High Fiber", "Omega-3", "Easy Digestion"],
-      nutrients: ["Fiber 6g", "Omega-3 1g", "Vitamin C 45mg"],
-      prepTime: "35 mins"
-    },
-    { 
-      e: "🍛", 
-      name: "Brown Rice with Vegetable Stew", 
-      b: "Brown rice with mixed vegetable and chicken stew. High in fiber and vitamins.", 
-      tags: ["High Fiber", "Vitamins", "Balanced"],
-      nutrients: ["Fiber 5g", "Vitamin A 180%", "Protein 22g"],
-      prepTime: "50 mins"
-    }
+    { e: "🍚", name: "Jollof Rice with Grilled Fish", b: "Tomato-based rice with tilapia. Rich in lycopene and omega-3s.", tags: ["Omega-3", "Iron", "Balanced"], nutrients: ["Omega-3 1.2g", "Protein 25g", "Iron 4mg"], prepTime: "45 mins" },
+    { e: "🥣", name: "Efo Riro (Spinach Stew) with Rice", b: "Rich spinach and assorted meat stew. Excellent iron source for pregnancy.", tags: ["Iron Rich", "Folate", "Traditional"], nutrients: ["Iron 8mg", "Folate 300mcg", "Protein 20g"], prepTime: "60 mins" },
+    { e: "🍲", name: "Egusi Soup with Pounded Yam", b: "Melon seed soup with leafy greens. High in zinc and healthy fats.", tags: ["Zinc Rich", "Healthy Fats", "Comfort Food"], nutrients: ["Zinc 5mg", "Healthy Fats 15g", "Protein 18g"], prepTime: "60 mins" },
+    { e: "🥗", name: "Okro Soup with Fish", b: "Okra and fish soup. Great for digestion and iron absorption.", tags: ["High Fiber", "Omega-3", "Easy Digestion"], nutrients: ["Fiber 6g", "Omega-3 1g", "Vitamin C 45mg"], prepTime: "35 mins" },
+    { e: "🍛", name: "Brown Rice with Vegetable Stew", b: "Brown rice with mixed vegetable and chicken stew. High in fiber and vitamins.", tags: ["High Fiber", "Vitamins", "Balanced"], nutrients: ["Fiber 5g", "Vitamin A 180%", "Protein 22g"], prepTime: "50 mins" }
   ],
   evening: [
-    { 
-      e: "🍲", 
-      name: "Ogbono Soup with Semovita", 
-      b: "Wild mango seed soup. Rich in healthy fats and easy to digest.", 
-      tags: ["Healthy Fats", "Comfort Food", "Easy Digestion"],
-      nutrients: ["Healthy Fats 12g", "Fiber 4g", "Iron 3mg"],
-      prepTime: "40 mins"
-    },
-    { 
-      e: "🐟", 
-      name: "Grilled Fish with Plantain", 
-      b: "Grilled tilapia with fried or boiled plantain. Great protein source.", 
-      tags: ["High Protein", "Potassium", "Light Meal"],
-      nutrients: ["Protein 30g", "Potassium 900mg", "Omega-3 1.5g"],
-      prepTime: "30 mins"
-    },
-    { 
-      e: "🍛", 
-      name: "Afang Soup with Swallow", 
-      b: "Wild spinach and waterleaf soup. Excellent iron and fiber source.", 
-      tags: ["Iron Rich", "High Fiber", "Traditional"],
-      nutrients: ["Iron 7mg", "Fiber 8g", "Vitamin K 400%"],
-      prepTime: "50 mins"
-    },
-    { 
-      e: "🥘", 
-      name: "Vegetable Fried Rice", 
-      b: "Fried rice with mixed vegetables and chicken. Good for picky eaters.", 
-      tags: ["Vegetables", "Balanced", "Family Meal"],
-      nutrients: ["Vitamin A 120%", "Vitamin C 60mg", "Protein 18g"],
-      prepTime: "40 mins"
-    }
+    { e: "🍲", name: "Ogbono Soup with Semovita", b: "Wild mango seed soup. Rich in healthy fats and easy to digest.", tags: ["Healthy Fats", "Comfort Food", "Easy Digestion"], nutrients: ["Healthy Fats 12g", "Fiber 4g", "Iron 3mg"], prepTime: "40 mins" },
+    { e: "🐟", name: "Grilled Fish with Plantain", b: "Grilled tilapia with fried or boiled plantain. Great protein source.", tags: ["High Protein", "Potassium", "Light Meal"], nutrients: ["Protein 30g", "Potassium 900mg", "Omega-3 1.5g"], prepTime: "30 mins" },
+    { e: "🍛", name: "Afang Soup with Swallow", b: "Wild spinach and waterleaf soup. Excellent iron and fiber source.", tags: ["Iron Rich", "High Fiber", "Traditional"], nutrients: ["Iron 7mg", "Fiber 8g", "Vitamin K 400%"], prepTime: "50 mins" },
+    { e: "🥘", name: "Vegetable Fried Rice", b: "Fried rice with mixed vegetables and chicken. Good for picky eaters.", tags: ["Vegetables", "Balanced", "Family Meal"], nutrients: ["Vitamin A 120%", "Vitamin C 60mg", "Protein 18g"], prepTime: "40 mins" }
   ]
 };
 
-// Craving Intelligence Database
+// ─── Journey Nutrition Tips (unchanged from original) ──────────────────────
+export const JOURNEY_NUTRITION = {
+  pregnant: {
+    t1: {
+      title: "First Trimester (Weeks 1-13)",
+      focus: "Folate, B6, ginger for nausea",
+      foods: "Efo riro, lentils, ginger tea, crackers, small frequent meals",
+      tips: "Eat small, frequent meals to manage nausea. Ginger tea and crackers help morning sickness."
+    },
+    t2: {
+      title: "Second Trimester (Weeks 14-27)",
+      focus: "Iron, calcium, protein",
+      foods: "Lean meat, ugu leaf, tiger nuts, dairy, fish, eggs",
+      tips: "Baby's bones are developing - increase calcium and vitamin D."
+    },
+    t3: {
+      title: "Third Trimester (Weeks 28-40)",
+      focus: "Omega-3, magnesium, hydration",
+      foods: "Fish, nuts, seeds, coconut water, dates",
+      tips: "Dates in last 4 weeks may help with labour. Stay hydrated."
+    }
+  },
+  ttc: {
+    title: "Fertility Boosting",
+    focus: "Folate, zinc, antioxidants",
+    foods: "Ugu leaf, garden eggs, tiger nuts, pumpkin seeds, berries",
+    tips: "Start folic acid before conception. Avoid alcohol and smoking."
+  },
+  ivf: {
+    title: "IVF Nutrition",
+    focus: "Anti-inflammatory, Mediterranean style",
+    foods: "Olive oil, fish, nuts, berries, leafy greens, avocado",
+    tips: "Anti-inflammatory diet supports egg quality. Reduce processed foods."
+  },
+  nursing: {
+    title: "Breastfeeding Nutrition",
+    focus: "Hydration, protein, galactagogues",
+    foods: "Oats, moringa, ugu leaf, fenugreek, water 3-4L daily",
+    tips: "You need 400-500 extra calories daily. Eat when baby eats."
+  },
+  menopause: {
+    title: "Menopause Nutrition",
+    focus: "Calcium, vitamin D, phytoestrogens",
+    foods: "Soy, flaxseeds, dairy or fortified alternatives, leafy greens",
+    tips: "Calcium and vitamin D are critical for bone health now."
+  }
+};
+
+// ─── Cravings Database (unchanged from original) ───────────────────────────
 export const CRAVINGS = {
   chocolate: {
     deficiency: "Magnesium deficiency",
@@ -190,9 +158,8 @@ export const CRAVINGS = {
   }
 };
 
-// Nigerian Cultural Foods Database
+// ─── Nigerian Cultural Foods Database (unchanged from original) ────────────
 export const NIGERIAN_FOODS = {
-  // Pregnancy Recommended
   pregnancy: {
     recommended: [
       "Efo Riro (Spinach stew) - Iron and folate rich",
@@ -218,8 +185,6 @@ export const NIGERIAN_FOODS = {
       "Use moringa (zogale) powder in smoothies"
     ]
   },
-  
-  // TTC Recommended
   ttc: {
     recommended: [
       "Ugu Leaf - High in folate and iron",
@@ -237,8 +202,6 @@ export const NIGERIAN_FOODS = {
       "Excessive soy products"
     ]
   },
-  
-  // Postpartum Recommended
   postpartum: {
     recommended: [
       "Oats - Milk supply booster",
@@ -257,90 +220,223 @@ export const NIGERIAN_FOODS = {
   }
 };
 
-// Journey-Specific Nutrition Tips
-export const JOURNEY_NUTRITION = {
-  pregnant: {
-    t1: {
-      title: "First Trimester (Weeks 1-13)",
-      focus: "Folate, B6, ginger for nausea",
-      foods: "Efo riro, lentils, ginger tea, crackers, small frequent meals",
-      tips: "Eat small, frequent meals to manage nausea. Ginger tea and crackers help morning sickness."
-    },
-    t2: {
-      title: "Second Trimester (Weeks 14-27)",
-      focus: "Iron, calcium, protein",
-      foods: "Lean meat, ugu leaf, tiger nuts, dairy, fish, eggs",
-      tips: "Baby's bones are developing - increase calcium and vitamin D."
-    },
-    t3: {
-      title: "Third Trimester (Weeks 28-40)",
-      focus: "Omega-3, magnesium, hydration",
-      foods: "Fish, nuts, seeds, coconut water, dates",
-      tips: "Dates in last 4 weeks may help with labour. Stay hydrated."
-    }
-  },
-  ttc: {
-    title: "Fertility Boosting",
-    focus: "Folate, zinc, antioxidants",
-    foods: "Ugu leaf, garden eggs, tiger nuts, pumpkin seeds, berries",
-    tips: "Start folic acid before conception. Avoid alcohol and smoking."
-  },
-  ivf: {
-    title: "IVF Nutrition",
-    focus: "Anti-inflammatory, Mediterranean style",
-    foods: "Olive oil, fish, nuts, berries, leafy greens, avocado",
-    tips: "Anti-inflammatory diet supports egg quality. Reduce processed foods."
-  },
-  nursing: {
-    title: "Breastfeeding Nutrition",
-    focus: "Hydration, protein, galactagogues",
-    foods: "Oats, moringa, ugu leaf, fenugreek, water 3-4L daily",
-    tips: "You need 400-500 extra calories daily. Eat when baby eats."
-  },
-  menopause: {
-    title: "Menopause Nutrition",
-    focus: "Calcium, vitamin D, phytoestrogens",
-    foods: "Soy, flaxseeds, dairy or fortified alternatives, leafy greens",
-    tips: "Calcium and vitamin D are critical for bone health now."
-  }
-};
+// ─── FACADE FUNCTIONS (backward compatible) ─────────────────────────────────
 
-// Helper function to get journey nutrition
-export function getJourneyNutrition(journeyType, trimester = null) {
-  if (journeyType === 'pregnant' && trimester) {
-    return JOURNEY_NUTRITION.pregnant[`t${trimester}`];
-  }
-  return JOURNEY_NUTRITION[journeyType] || JOURNEY_NUTRITION.pregnant.t2;
-}
-
-// Helper function to analyze craving
+/**
+ * analyzeCraving - Backward compatible with existing imports
+ * First checks the new food database, then falls back to legacy CRAVINGS
+ * 
+ * @param {string} cravingText - What the user is craving
+ * @returns {Object} { deficiency, food, icon, urgent, source }
+ */
 export function analyzeCraving(cravingText) {
   const lowerText = cravingText.toLowerCase();
-  for (const [key, value] of Object.entries(CRAVINGS)) {
-    if (lowerText.includes(key)) {
-      return value;
+  
+  // 1. Check if there's a match in the new food database
+  for (const [id, food] of Object.entries(NEW_FOODS)) {
+    if (lowerText.includes(id) || lowerText.includes(food.name.toLowerCase())) {
+      return {
+        deficiency: `You might need nutrients found in ${food.name}`,
+        food: food.dietaryNotes?.join(' ') || food.name,
+        icon: '🔍',
+        urgent: false,
+        source: 'food_database'
+      };
     }
   }
-  return CRAVINGS.default;
-}
-
-// Helper function to get Nigerian food by category
-export function getNigerianFoods(category) {
-  return NIGERIAN_FOODS[category] || NIGERIAN_FOODS.pregnancy;
-}
-
-// Helper function to get meals by meal type and trimester
-export function getMeals(mealType, trimester = 2) {
-  let meals = [...FOODS[mealType]];
   
-  // Filter or modify meals based on trimester
+  // 2. Check legacy CRAVINGS map (exact matches)
+  for (const [key, value] of Object.entries(CRAVINGS)) {
+    if (lowerText.includes(key)) {
+      return { ...value, source: 'legacy_cravings' };
+    }
+  }
+  
+  // 3. Fallback
+  return {
+    deficiency: 'No clear deficiency detected',
+    food: 'Listen to your body. Try a balanced meal with protein and healthy fats.',
+    icon: '🤔',
+    urgent: false,
+    source: 'fallback'
+  };
+}
+
+/**
+ * getNigerianFoods - Backward compatible with existing imports
+ * Uses the new resolver to get Nigerian/West African foods
+ * 
+ * @param {string} category - 'pregnancy' | 'ttc' | 'postpartum' | 'conceive' | 'mom'
+ * @param {string} journeyType - The user's journey type
+ * @returns {Object} { recommended, avoid, tips, breastfeedingTips }
+ */
+export function getNigerianFoods(category, journeyType) {
+  const journey = journeyType || 'pregnancy';
+  const result = getCulturalMeal('west_central_african', null, journey);
+  
+  // Map legacy category names to new journey keys
+  const categoryMap = {
+    'pregnancy': 'pregnancy',
+    'ttc': 'conceive',
+    'conceive': 'conceive',
+    'postpartum': 'mom',
+    'mom': 'mom',
+    'nursing': 'mom'
+  };
+  
+  const mappedCategory = categoryMap[category] || categoryMap[journey] || 'pregnancy';
+  
+  // Return in the expected format
+  const journeyData = result[mappedCategory] || result.pregnancy || {};
+  
+  // If we have data from the new resolver, use it
+  if (journeyData.recommended || journeyData.avoid) {
+    return {
+      recommended: journeyData.recommended || [],
+      avoid: journeyData.avoid || [],
+      tips: journeyData.tips || [],
+      breastfeedingTips: journeyData.breastfeedingTips || []
+    };
+  }
+  
+  // Fallback to legacy NIGERIAN_FOODS
+  const legacyCategory = category === 'ttc' ? 'ttc' : 
+                          category === 'postpartum' || category === 'mom' || category === 'nursing' ? 'postpartum' : 
+                          'pregnancy';
+  
+  const fallback = NIGERIAN_FOODS[legacyCategory] || NIGERIAN_FOODS.pregnancy;
+  
+  return {
+    recommended: fallback.recommended || [],
+    avoid: fallback.avoid || [],
+    tips: fallback.tips || [],
+    breastfeedingTips: fallback.breastfeedingTips || []
+  };
+}
+
+/**
+ * getJourneyNutrition - Returns nutrition tips for a specific journey
+ * 
+ * @param {string} journeyType - 'pregnant' | 'ttc' | 'ivf' | 'nursing' | 'menopause'
+ * @param {string} trimester - 't1' | 't2' | 't3' (only for pregnant)
+ * @returns {Object} { title, focus, foods, tips }
+ */
+export function getJourneyNutrition(journeyType, trimester) {
+  // Check if it's a pregnancy trimester request
+  if (journeyType === 'pregnant' && trimester) {
+    const trimesterKey = `t${trimester}`;
+    if (JOURNEY_NUTRITION.pregnant[trimesterKey]) {
+      return JOURNEY_NUTRITION.pregnant[trimesterKey];
+    }
+  }
+  
+  // Get the journey nutrition data
+  const journeyData = JOURNEY_NUTRITION[journeyType];
+  if (journeyData) {
+    return journeyData;
+  }
+  
+  // Fallback to second trimester
+  return JOURNEY_NUTRITION.pregnant.t2;
+}
+
+/**
+ * getMeals - Returns meals for a specific meal type and trimester
+ * 
+ * @param {string} mealType - 'morning' | 'afternoon' | 'evening'
+ * @param {number} trimester - 1 | 2 | 3
+ * @returns {Array} [{ name, description, nutrients, prepTime }]
+ */
+export function getMeals(mealType, trimester = 2) {
+  // First check if we have data from the new food database
+  try {
+    const result = getCulturalMeal('west_central_african', mealType, 'pregnant');
+    const mealItems = result[mealType] || [];
+    
+    if (mealItems.length > 0) {
+      // Filter by trimester if needed (simplified)
+      if (trimester === 1) {
+        const firstTrimesterFriendly = ['ginger', 'crackers', 'moi moi', 'pap', 'akara'];
+        return mealItems.filter(item => 
+          firstTrimesterFriendly.some(keyword => 
+            item.name?.toLowerCase().includes(keyword)
+          )
+        );
+      }
+      return mealItems;
+    }
+  } catch (e) {
+    // Fall back to legacy FOODS
+  }
+  
+  // Legacy fallback
+  const meals = [...FOODS[mealType] || []];
+  
   if (trimester === 1) {
-    meals = meals.filter(meal => 
-      meal.name.includes("Ginger") || 
+    return meals.filter(meal =>
+      meal.name.includes("Ginger") ||
       meal.name.includes("Crackers") ||
-      meal.name.includes("Moi Moi")
+      meal.name.includes("Moi Moi") ||
+      meal.name.includes("Pap") ||
+      meal.name.includes("Akara")
     );
   }
   
   return meals;
+}
+
+/**
+ * getMealSuggestions - Returns personalized meal suggestions based on user history
+ * 
+ * @param {Array} favoriteFoods - Array of food names the user likes
+ * @param {Array} dietaryPractices - Array of dietary restrictions
+ * @param {string} journeyType - The user's journey
+ * @param {string} culture - The user's culture
+ * @returns {Array} [{ name, description, basedOn }]
+ */
+export function getMealSuggestions({ favoriteFoods = [], dietaryPractices = [], journeyType = 'pregnant', culture = 'west_central_african' } = {}) {
+  // Use the new resolver to get suggestions
+  try {
+    const foods = getJourneyFoods(journeyType, culture);
+    
+    if (favoriteFoods.length > 0) {
+      // Find foods similar to favorites
+      const suggestions = [];
+      const allFoods = foods.meals?.breakfast || [];
+      
+      favoriteFoods.forEach(fav => {
+        const matched = allFoods.find(f => 
+          f.name?.toLowerCase().includes(fav.toLowerCase()) ||
+          fav.toLowerCase().includes(f.name?.toLowerCase())
+        );
+        if (matched) {
+          suggestions.push({
+            name: `Try ${matched.name}`,
+            description: matched.dietaryNotes?.join(' ') || matched.description || 'A nutritious meal option',
+            basedOn: fav,
+            nutrients: matched.nutrients || []
+          });
+        }
+      });
+      
+      if (suggestions.length > 0) {
+        return suggestions;
+      }
+    }
+    
+    // Fallback: get recommended foods for the journey
+    const mealData = getCulturalMeal(culture || 'west_central_african', null, journeyType);
+    const recommended = mealData[journeyType]?.recommended || [];
+    
+    return recommended.slice(0, 5).map(item => ({
+      name: `Try ${item}`,
+      description: `Recommended for ${journeyType}`,
+      basedOn: 'journey_recommendation',
+      nutrients: []
+    }));
+  } catch (e) {
+    return [
+      { name: "Log your first meal", description: "Start tracking what you eat to get personalized suggestions", basedOn: "welcome", nutrients: [] }
+    ];
+  }
 }

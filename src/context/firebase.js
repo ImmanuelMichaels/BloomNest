@@ -1,9 +1,9 @@
-// Import the functions you need from the SDKs you need
+// /src/context/firebase.js
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
-
+import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'firebase/app-check';
 
 const firebaseConfig = {
   apiKey: "AIzaSyCSWfGltSa8GCn3rJl-YIkL9rH6G_6z-Cw",
@@ -16,8 +16,19 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
+
+if (import.meta.env.DEV) {
+  self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+}
+
+initializeAppCheck(app, {
+  provider: new ReCaptchaEnterpriseProvider("abc123-your-site-key"),
+  isTokenAutoRefreshEnabled: true,
+});
+
 const auth = getAuth(app);
 const db = getFirestore(app);
-export const storage = getStorage(app);
+const storage = getStorage(app);
 
-export { auth, db};
+// Export everything including app
+export { auth, db, storage, app }; 

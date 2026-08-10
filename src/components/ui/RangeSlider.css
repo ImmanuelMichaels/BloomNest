@@ -1,0 +1,120 @@
+.rs-wrap {
+  padding: var(--sp-2) 2px var(--sp-3);
+}
+
+.rs-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: var(--sp-3);
+}
+
+.rs-label {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--mt);
+}
+
+.rs-static-value {
+  font-size: var(--fs-sm);
+  font-weight: 800;
+  color: var(--dp);
+  font-variant-numeric: tabular-nums;
+  transition: color 0.2s ease;
+}
+
+.rs-track {
+  position: relative;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  touch-action: none;
+}
+
+.rs-track-bg {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--border);
+}
+
+.rs-fill {
+  position: absolute;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--accent);
+  transition: left 0.05s linear, width 0.05s linear;
+}
+
+.rs-thumb {
+  position: absolute;
+  top: 50%;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  border: 3px solid var(--accent);
+  transform: translate(-50%, -50%);
+  cursor: grab;
+  padding: 0;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+  transition: box-shadow 0.15s ease, transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.rs-thumb:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22);
+}
+
+.rs-thumb:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.rs-thumb--active {
+  cursor: grabbing;
+  transform: translate(-50%, -50%) scale(1.25);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
+}
+
+.rs-bubble {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translate(-50%, 6px) scale(0.85);
+  background: var(--dp, #2a2a2a);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 9px;
+  border-radius: 8px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease, transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+  font-variant-numeric: tabular-nums;
+}
+
+.rs-bubble::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: var(--dp, #2a2a2a);
+}
+
+.rs-bubble--show {
+  opacity: 1;
+  transform: translate(-50%, 0) scale(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rs-thumb,
+  .rs-bubble,
+  .rs-fill {
+    transition: none;
+  }
+}

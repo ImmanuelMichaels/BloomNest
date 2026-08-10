@@ -4,7 +4,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { WCard, SectionTitle } from '../../components/ui';
 import { useApp } from '../../context/useApp';
 import BreathingExercise from './BreathingExercise';
-import { lsGet, lsSet } from '../../utils/storage'; // ← ADDED
+import { lsGet, lsSet } from '../../utils/storage';
+import '../../styles/motion.css';
 import './Mental.css';
 
 export default function Mental() {
@@ -13,6 +14,7 @@ export default function Mental() {
   // ─── STATE ───────────────────────────────────────────────────────────────
   const [mood, setMood] = useState(null);
   const [activeAffirmation, setActiveAffirmation] = useState(0);
+  const [moodHistory, setMoodHistory] = useState([]);
 
   // ─── MOODS ───────────────────────────────────────────────────────────────
   const moods = [
@@ -174,21 +176,32 @@ export default function Mental() {
 
   // ─── MOOD PERSISTENCE (FIXED with safe storage) ────────────────────────
   useEffect(() => {
-    // Use lsGet instead of raw localStorage
     const savedMood = lsGet('mental_mood');
     const savedDate = lsGet('mental_mood_date');
     const today = new Date().toISOString().split('T')[0];
+    const history = lsGet('mental_mood_history', []);
 
     if (savedMood && savedDate === today) {
       setMood(savedMood);
     }
+    setMoodHistory(history.slice(-7)); // Last 7 days
   }, []);
 
   const saveMood = useCallback((selectedMood) => {
     const today = new Date().toISOString().split('T')[0];
-    // Use lsSet instead of raw localStorage
+    const newEntry = { date: today, mood: selectedMood };
+    
+    // Save current mood
     lsSet('mental_mood', selectedMood);
     lsSet('mental_mood_date', today);
+    
+    // Update history
+    const history = lsGet('mental_mood_history', []);
+    const filtered = history.filter(h => h.date !== today);
+    const updated = [...filtered, newEntry];
+    lsSet('mental_mood_history', updated);
+    setMoodHistory(updated.slice(-7));
+    
     setMood(selectedMood);
   }, []);
 
@@ -206,122 +219,260 @@ export default function Mental() {
     return "Thank you for checking in. Your feelings matter.";
   };
 
+  const getMoodStreak = () => {
+    if (moodHistory.length === 0) return 0;
+    let streak = 0;
+    const today = new Date().toISOString().split('T')[0];
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    
+    // Check if logged today
+    const todayEntry = moodHistory.find(h => h.date === today);
+    if (!todayEntry) return 0;
+    
+    streak = 1;
+    let checkDate = new Date(today);
+    checkDate.setDate(checkDate.getDate() - 1);
+    
+    while (true) {
+      const dateStr = checkDate.toISOString().split('T')[0];
+      const entry = moodHistory.find(h => h.date === dateStr);
+      if (!entry) break;
+      streak++;
+      checkDate.setDate(checkDate.getDate() - 1);
+    }
+    return streak;
+  };
+
+  const moodStreak = getMoodStreak();
+
   return (
     <div className="page-pad">
       <SectionTitle title="Mental Wellness 💚" />
 
       {/* Mood Check */}
-      <WCard>
-        <p style={{ fontSize: "var(--fs-md)", fontWeight: 800, color: "var(--dp)", marginBottom: "var(--sp-4)" }}>
-          How are you feeling today?
-        </p>
-        <div className="mood-row" style={{ marginBottom: "var(--sp-4)" }}>
-          {moods.map(m => (
-            <button
-              key={m.l}
-              className="mood-btn"
-              onClick={() => saveMood(m)}
-              style={{
-                background: mood?.l === m.l ? m.c + "22" : "transparent",
-                border: `2px solid ${mood?.l === m.l ? m.c : "transparent"}`
-              }}
-            >
-              <span>{m.e}</span>
-              <small style={{ color: mood?.l === m.l ? m.c : "var(--mt)" }}>{m.l}</small>
-            </button>
-          ))}
-        </div>
-        {mood && (
-          <div className="fu" style={{ 
-            background: mood.c + "18", 
-            borderRadius: "var(--r)", 
-            padding: "var(--sp-3) var(--card-p)", 
-            border: `1px solid ${mood.c}33` 
-          }}>
-            <p style={{ fontSize: "var(--fs-sm)", fontWeight: 700, color: mood.c }}>
-              Logged: {mood.e} {mood.l}. {getMoodFeedback(mood)}
+      <div className="card-in card-in-1">
+        <WCard>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--sp-4)' }}>
+            <p style={{ fontSize: "var(--fs-md)", fontWeight: 800, color: "var(--dp)", margin: 0 }}>
+              How are you feeling today?
             </p>
+            {moodStreak > 0 && (
+              <div style={{ 
+                background: 'var(--lvl)', 
+                borderRadius: 20, 
+                padding: '4px 12px',
+                fontSize: 'var(--fs-xs)',
+                fontWeight: 600,
+                color: 'var(--lv)'
+              }}>
+                🔥 {moodStreak} day streak
+              </div>
+            )}
           </div>
-        )}
-      </WCard>
+          <div className="mood-row" style={{ marginBottom: "var(--sp-4)" }}>
+            {moods.map(m => (
+              <button
+                key={m.l}
+                className={`mood-btn btn-tap choice-chip ${mood?.l === m.l ? 'choice-chip--selected' : ''}`}
+                onClick={() => saveMood(m)}
+                style={{
+                  background: mood?.l === m.l ? m.c + "22" : "transparent",
+                  border: `2px solid ${mood?.l === m.l ? m.c : "transparent"}`
+                }}
+              >
+                <span>{m.e}</span>
+                <small style={{ color: mood?.l === m.l ? m.c : "var(--mt)" }}>{m.l}</small>
+              </button>
+            ))}
+          </div>
+          {mood && (
+            <div className="reveal-in" style={{ 
+              background: mood.c + "18", 
+              borderRadius: "var(--r)", 
+              padding: "var(--sp-3) var(--card-p)", 
+              border: `1px solid ${mood.c}33` 
+            }}>
+              <p style={{ fontSize: "var(--fs-sm)", fontWeight: 700, color: mood.c }}>
+                Logged: {mood.e} {mood.l}. {getMoodFeedback(mood)}
+              </p>
+            </div>
+          )}
+        </WCard>
+      </div>
 
       {/* Breathing Exercise - FIXED */}
-      <BreathingExercise />
+      <div className="card-in card-in-2">
+        <BreathingExercise />
+      </div>
 
       {/* Daily Affirmations */}
-      <SectionTitle title="Daily Affirmations" />
-      <WCard>
-        <div style={{ textAlign: "center", padding: "var(--sp-4)" }}>
-          <p style={{ fontSize: "clamp(20px,5vw,28px)", lineHeight: 1.4, minHeight: "120px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            {currentAffirmations[activeAffirmation]}
-          </p>
-          <div style={{ display: "flex", gap: "var(--sp-2)", justifyContent: "center", marginTop: "var(--sp-3)" }}>
-            <button
-              onClick={() => setActiveAffirmation(prev => (prev - 1 + currentAffirmations.length) % currentAffirmations.length)}
-              aria-label="Previous affirmation"
-              style={{ background: "var(--lvl)", border: "none", borderRadius: 20, padding: "8px 16px", cursor: "pointer" }}
-            >
-              ‹
-            </button>
-            <button
-              onClick={() => setActiveAffirmation(prev => (prev + 1) % currentAffirmations.length)}
-              aria-label="Next affirmation"
-              style={{ background: "var(--lvl)", border: "none", borderRadius: 20, padding: "8px 16px", cursor: "pointer" }}
-            >
-              ›
-            </button>
-          </div>
-        </div>
-      </WCard>
-
-      {/* Wellness Tips */}
-      <SectionTitle title={`Wellness Tips for ${journeyType === 'mom' ? 'Mums' : journeyType}`} />
-      {currentTips.map((item, i) => (
-        <WCard key={i} style={{ marginBottom: "var(--gap-md)" }}>
-          <div style={{ display: "flex", gap: "var(--gap-md)", alignItems: "flex-start" }}>
-            <div style={{ 
-              width: "var(--icon-sm)", 
-              height: "var(--icon-sm)", 
-              borderRadius: "var(--r)", 
-              background: ["var(--sgl)", "var(--gdl)", "var(--lvl)"][i % 3], 
+      <div className="card-in card-in-3">
+        <SectionTitle title="Daily Affirmations" />
+        <WCard>
+          <div style={{ textAlign: "center", padding: "var(--sp-4)" }}>
+            <p style={{ 
+              fontSize: "clamp(20px,5vw,28px)", 
+              lineHeight: 1.6, 
+              minHeight: "120px", 
               display: "flex", 
               alignItems: "center", 
-              justifyContent: "center", 
-              fontSize: "var(--fs-xl)", 
-              flexShrink: 0 
+              justifyContent: "center",
+              transition: 'opacity 0.3s ease'
             }}>
-              {item.icon}
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontSize: "var(--fs-sm)", fontWeight: 800, color: "var(--dp)", marginBottom: "var(--sp-2)" }}>
-                {item.title}
-              </p>
-              <p style={{ fontSize: "var(--fs-sm)", color: "var(--md)", lineHeight: 1.6 }}>
-                {item.tip}
-              </p>
+              "{currentAffirmations[activeAffirmation]}"
+            </p>
+            <div style={{ 
+              display: "flex", 
+              gap: "var(--sp-2)", 
+              justifyContent: "center", 
+              marginTop: "var(--sp-3)" 
+            }}>
+              <button
+                onClick={() => setActiveAffirmation(prev => (prev - 1 + currentAffirmations.length) % currentAffirmations.length)}
+                aria-label="Previous affirmation"
+                className="btn-tap"
+                style={{ 
+                  background: "var(--lvl)", 
+                  border: "none", 
+                  borderRadius: 20, 
+                  padding: "8px 16px", 
+                  cursor: "pointer",
+                  fontWeight: 700,
+                  fontSize: 'var(--fs-lg)'
+                }}
+              >
+                ‹
+              </button>
+              <span style={{ 
+                fontSize: 'var(--fs-xs)', 
+                color: 'var(--mt)',
+                display: 'flex',
+                alignItems: 'center',
+                padding: '0 var(--sp-2)'
+              }}>
+                {activeAffirmation + 1} / {currentAffirmations.length}
+              </span>
+              <button
+                onClick={() => setActiveAffirmation(prev => (prev + 1) % currentAffirmations.length)}
+                aria-label="Next affirmation"
+                className="btn-tap"
+                style={{ 
+                  background: "var(--lvl)", 
+                  border: "none", 
+                  borderRadius: 20, 
+                  padding: "8px 16px", 
+                  cursor: "pointer",
+                  fontWeight: 700,
+                  fontSize: 'var(--fs-lg)'
+                }}
+              >
+                ›
+              </button>
             </div>
           </div>
         </WCard>
-      ))}
+      </div>
+
+      {/* Wellness Tips */}
+      <div className="card-in card-in-4">
+        <SectionTitle title={`Wellness Tips for ${journeyType === 'mom' ? 'Mums' : journeyType}`} />
+        {currentTips.map((item, i) => (
+          <WCard 
+            key={i} 
+            className="reveal-in" 
+            style={{ 
+              marginBottom: "var(--gap-md)",
+              animationDelay: `${i * 0.08}s`
+            }}
+          >
+            <div style={{ display: "flex", gap: "var(--gap-md)", alignItems: "flex-start" }}>
+              <div style={{ 
+                width: "var(--icon-sm)", 
+                height: "var(--icon-sm)", 
+                borderRadius: "var(--r)", 
+                background: ["var(--sgl)", "var(--gdl)", "var(--lvl)"][i % 3], 
+                display: "flex", 
+                alignItems: "center", 
+                justifyContent: "center", 
+                fontSize: "var(--fs-xl)", 
+                flexShrink: 0 
+              }}>
+                {item.icon}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontSize: "var(--fs-sm)", fontWeight: 800, color: "var(--dp)", marginBottom: "var(--sp-2)" }}>
+                  {item.title}
+                </p>
+                <p style={{ fontSize: "var(--fs-sm)", color: "var(--md)", lineHeight: 1.6 }}>
+                  {item.tip}
+                </p>
+              </div>
+            </div>
+          </WCard>
+        ))}
+      </div>
 
       {/* Emergency Support */}
-      <SectionTitle title="Need Immediate Support?" />
-      <WCard style={{ background: "linear-gradient(135deg,#FFE5E5,#FFD6D6)", border: "1px solid #FFB3B3" }}>
-        <p style={{ fontSize: "var(--fs-sm)", fontWeight: 800, color: "var(--rd)", marginBottom: "var(--sp-2)" }}>
-          🚨 You are not alone
-        </p>
-        <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-2)" }}>
-          <a href="tel:116123" style={{ color: "var(--rd)", textDecoration: "none", fontWeight: 600 }}>
-            📞 Samaritans – 116 123 (24/7)
-          </a>
-          <a href="tel:111" style={{ color: "var(--rd)", textDecoration: "none", fontWeight: 600 }}>
-            📞 NHS 111 (non-emergency)
-          </a>
-          <a href="tel:999" style={{ color: "var(--rd)", textDecoration: "none", fontWeight: 600 }}>
-            🚨 Emergency – 999
-          </a>
-        </div>
-      </WCard>
+      <div className="card-in card-in-5">
+        <SectionTitle title="Need Immediate Support?" />
+        <WCard className="reveal-in" style={{ 
+          background: "linear-gradient(135deg,#FFE5E5,#FFD6D6)", 
+          border: "1px solid #FFB3B3" 
+        }}>
+          <p style={{ fontSize: "var(--fs-sm)", fontWeight: 800, color: "var(--rd)", marginBottom: "var(--sp-2)" }}>
+            🚨 You are not alone
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-2)" }}>
+            <a 
+              href="tel:116123" 
+              className="btn-tap"
+              style={{ 
+                color: "var(--rd)", 
+                textDecoration: "none", 
+                fontWeight: 600,
+                padding: 'var(--sp-2)',
+                borderRadius: 'var(--r)',
+                background: 'rgba(255,255,255,0.5)',
+                transition: 'background 0.2s ease'
+              }}
+            >
+              📞 Samaritans – 116 123 (24/7)
+            </a>
+            <a 
+              href="tel:111" 
+              className="btn-tap"
+              style={{ 
+                color: "var(--rd)", 
+                textDecoration: "none", 
+                fontWeight: 600,
+                padding: 'var(--sp-2)',
+                borderRadius: 'var(--r)',
+                background: 'rgba(255,255,255,0.5)',
+                transition: 'background 0.2s ease'
+              }}
+            >
+              📞 NHS 111 (non-emergency)
+            </a>
+            <a 
+              href="tel:999" 
+              className="btn-tap"
+              style={{ 
+                color: "var(--rd)", 
+                textDecoration: "none", 
+                fontWeight: 600,
+                padding: 'var(--sp-2)',
+                borderRadius: 'var(--r)',
+                background: 'rgba(255,255,255,0.5)',
+                transition: 'background 0.2s ease'
+              }}
+            >
+              🚨 Emergency – 999
+            </a>
+          </div>
+        </WCard>
+      </div>
     </div>
   );
 }
