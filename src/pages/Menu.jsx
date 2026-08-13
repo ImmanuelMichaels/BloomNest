@@ -106,18 +106,6 @@ export default function Menu({ setActive, onSOS }) {
 
   return (
     <div className="ms-root">
-      {/* Header */}
-      <div className="ms-header">
-        <div>
-          <p className="ms-greeting-sub">{getGreeting()}</p>
-          <p className="ms-greeting">
-            {displayName} <span style={{ fontSize: 18 }}>👋</span>
-          </p>
-        </div>
-        <button className="ms-sos" onClick={handleSOS}>
-          <span style={{ fontSize: 13 }}>▲</span> SOS
-        </button>
-      </div>
 
       {/* Journey tag */}
       <div className="ms-journey-tag">
@@ -130,9 +118,6 @@ export default function Menu({ setActive, onSOS }) {
         {sections.map((section) => (
           <div key={section.id} className="ms-category">
             <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 2 }}>
-              <span style={{ fontSize: 13, color: section.iconColor }}>
-                {section.icon}
-              </span>
               <span className="ms-category-title">{section.title}</span>
             </div>
 

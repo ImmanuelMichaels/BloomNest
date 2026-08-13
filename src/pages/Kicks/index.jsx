@@ -179,7 +179,7 @@ export default function Kicks() {
 
   return (
     <div className="page-pad">
-      <SectionTitle title=" Kick Counter 👶" />
+      <SectionTitle title=" Kick Counter" />
 
       <WCard style={{ background: cardStyle.bg, display: "flex", flexDirection: "column", alignItems: "normal", border: `1.5px solid ${cardStyle.border}44` }}>
         <div style={{ textAlign: "center", padding: "var(--sp-3) 0 var(--sp-4)" }}>

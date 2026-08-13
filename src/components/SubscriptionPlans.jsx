@@ -12,23 +12,32 @@ import {
 } from '../config/foundingMember';
 
 // ── Plan IDs ─────────────────────────────────────────────────────────────────
-// These values MUST match AppContext.jsx's PLAN_TYPES exactly (same strings),
-// since AppContext.getAiMessageLimit() checks subscriptionPlan === PLAN_TYPES.PLUS.
-// If you rename either side, rename both — do not let them drift.
 export const PLAN_IDS = {
-  FREE:       'free',
-  BLOOM_PLUS: 'plus',
+  TRIAL:             'trial',        // Changed from FREE
+  BLOOM_PLUS:        'plus',
+  BLOOM_PLUS_ANNUAL: 'plus_annual',
 };
+
+// ── Annual upgrade pricing ───────────────────────────────────────────────────
+const ANNUAL_PRICE = '£59.99';
+const ANNUAL_SAVINGS_LABEL = 'Save ~28% vs monthly';
+const ANNUAL_PERKS = [
+  'Everything in Bloom+, uninterrupted',
+  'Price locked for 12 months',
+  ANNUAL_SAVINGS_LABEL,
+];
 
 const PURPLE = '#4108a5';
 const GREEN  = '#2E9E67';
 
-export default function SubscriptionPlans({ onClose, onUpgrade }) {
+export default function SubscriptionPlans({ onClose, onUpgrade, currentPlan = PLAN_IDS.TRIAL }) {
   const [email, setEmail]         = useState(auth.currentUser?.email || '');
   const [name, setName]           = useState(auth.currentUser?.displayName || '');
   const [loading, setLoading]     = useState(false);
   const [error, setError]         = useState(null);
   const [waitlisted, setWaitlisted] = useState(false);
+
+  const isAnnualUpgrade = currentPlan === PLAN_IDS.BLOOM_PLUS;
 
   const handleReserve = async () => {
     if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
@@ -43,8 +52,31 @@ export default function SubscriptionPlans({ onClose, onUpgrade }) {
     setError(null);
     setLoading(true);
 
+    if (isAnnualUpgrade) {
+      try {
+        const functions = getFunctions(app, FUNCTIONS_REGION);
+        const createUpgradeCheckout = httpsCallable(functions, 'createPlanUpgradeCheckout');
+        const { data } = await createUpgradeCheckout({
+          email: email.trim(),
+          name: name.trim(),
+          targetPlan: PLAN_IDS.BLOOM_PLUS_ANNUAL,
+          redirectUrl: `${window.location.origin}/membership-confirmation`,
+        });
+
+        if (data && data.link) {
+          window.location.href = data.link;
+        } else {
+          throw new Error('No payment link returned');
+        }
+      } catch (err) {
+        console.error('Annual upgrade checkout error:', err);
+        setError(getReservationErrorMessage(err));
+        setLoading(false);
+      }
+      return;
+    }
+
     if (!PAYMENTS_LIVE) {
-      // Payments aren't live — capture interest, don't fake an upgrade.
       try {
         const functions = getFunctions(app, FUNCTIONS_REGION);
         const joinWaitlist = httpsCallable(functions, 'joinFoundingMemberWaitlist');
@@ -59,13 +91,6 @@ export default function SubscriptionPlans({ onClose, onUpgrade }) {
       return;
     }
 
-    // Payments live — send them to real Flutterwave checkout.
-    // IMPORTANT: onUpgrade is intentionally NOT called here. The user is
-    // leaving the app for the Flutterwave checkout page, so we never know
-    // client-side whether they actually paid. subscriptionPlan must be
-    // flipped to PLAN_IDS.BLOOM_PLUS by a server-side webhook (the same
-    // Cloud Function stack behind createFoundingMemberCheckout) once
-    // Flutterwave confirms payment — not from this redirect.
     try {
       const functions = getFunctions(app, FUNCTIONS_REGION);
       const createCheckout = httpsCallable(functions, 'createFoundingMemberCheckout');
@@ -86,6 +111,9 @@ export default function SubscriptionPlans({ onClose, onUpgrade }) {
       setLoading(false);
     }
   };
+
+  const perks = isAnnualUpgrade ? ANNUAL_PERKS : FOUNDING_PERKS;
+  const price = isAnnualUpgrade ? ANNUAL_PRICE : FOUNDING_PRICE;
 
   const modal = (
     <div
@@ -154,11 +182,12 @@ export default function SubscriptionPlans({ onClose, onUpgrade }) {
         ) : (
           <>
             <h2 id="subscription-modal-title" style={{ fontSize: 22, fontWeight: 800, color: '#222', textAlign: 'center', marginBottom: 4 }}>
-              Become a Founding Member
+              {isAnnualUpgrade ? 'Upgrade to Bloom+ Annual' : 'Become a Founding Member'}
             </h2>
             <p style={{ fontSize: 13, color: '#666', textAlign: 'center', marginBottom: 20 }}>
-              Be one of the first 100 Founding Members and lock in founding pricing
-              before we launch.
+              {isAnnualUpgrade
+                ? 'Switch your Bloom+ subscription to annual billing and lock in a lower rate for 12 months.'
+                : 'Be one of the first 100 Founding Members and lock in founding pricing before we launch.'}
             </p>
 
             <div style={{
@@ -168,12 +197,14 @@ export default function SubscriptionPlans({ onClose, onUpgrade }) {
               marginBottom: 18,
             }}>
               <div style={{ textAlign: 'center', marginBottom: 14 }}>
-                <span style={{ fontSize: 32, fontWeight: 800, color: PURPLE }}>{FOUNDING_PRICE}</span>
-                <span style={{ fontSize: 12, color: '#999' }}>/month — locked for 12 months</span>
+                <span style={{ fontSize: 32, fontWeight: 800, color: PURPLE }}>{price}</span>
+                <span style={{ fontSize: 12, color: '#999' }}>
+                  {isAnnualUpgrade ? '/year — billed once' : '/month — locked for 12 months'}
+                </span>
               </div>
 
               <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: 13, color: '#444' }}>
-                {FOUNDING_PERKS.map((perk) => (
+                {perks.map((perk) => (
                   <li key={perk} style={{ display: 'flex', gap: 8, padding: '4px 0' }}>
                     <span style={{ color: GREEN, flexShrink: 0 }}>✓</span>{perk}
                   </li>
@@ -226,12 +257,14 @@ export default function SubscriptionPlans({ onClose, onUpgrade }) {
             >
               {loading
                 ? 'Please wait…'
-                : PAYMENTS_LIVE
-                  ? `Reserve my Founding Member spot — ${FOUNDING_PRICE}`
-                  : 'Join the Founding Member list'}
+                : isAnnualUpgrade
+                  ? `Upgrade to Annual — ${ANNUAL_PRICE}/yr`
+                  : PAYMENTS_LIVE
+                    ? `Reserve my Founding Member spot — ${FOUNDING_PRICE}`
+                    : 'Join the Founding Member list'}
             </button>
 
-            {PAYMENTS_LIVE && (
+            {(isAnnualUpgrade || PAYMENTS_LIVE) && (
               <p style={{ fontSize: 11, color: '#999', textAlign: 'center', marginTop: 10 }}>
                 You'll be taken to secure checkout to complete payment.
               </p>

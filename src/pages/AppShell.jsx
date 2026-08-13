@@ -136,27 +136,16 @@ function Spinner() {
 export default function AppShell() {
   const { journey } = useParams();
   const navigate = useNavigate();
-  const { 
-    journeyType, 
+  const {
+    journeyType,
     setJourneyType,
-    showSOS, 
+    showSOS,
     setShowSOS,
-    userId,
-    updateJourneyType,
-    updateUserName,
-    updateCulture,
-    updateDietaryPractices,
-    updateEdd,
-    updateBabyNumber,
-    updateBabyBirthDate,
-    updateCycleLength,
-    updatePeriodLength,
-    updateTreatmentType,
-    updateIvfCycleNumber,
-    updateMenopauseStage,
-    updateMenopauseSymptoms,
-    updateFeedingMethod,
+    user,
   } = useApp();
+
+  // Firebase auth uid — AppContext exposes the `user` object, not a bare `userId`.
+  const userId = user?.uid;
 
   const [showEPDS, setShowEPDS] = useState(false);
   const [showSubscription, setShowSubscription] = useState(false);
@@ -168,10 +157,10 @@ export default function AppShell() {
     if (journey) {
       const validJourneys = ['pregnant', 'ivf', 'conceive', 'mom', 'menopause'];
       if (validJourneys.includes(journey) && journey !== journeyType) {
-        updateJourneyType(journey);
+        setJourneyType(journey);
       }
     }
-  }, [journey, journeyType, updateJourneyType]);
+  }, [journey, journeyType, setJourneyType]);
 
   // ── EPDS Check - Using Firestore ──
   useEffect(() => {

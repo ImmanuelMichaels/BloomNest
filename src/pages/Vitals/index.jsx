@@ -640,7 +640,7 @@ const Vitals = () => {
       }
     },
       React.createElement("div", { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--sp-3)' } },
-        React.createElement("p", { style: { fontSize: "var(--fs-md)", fontWeight: 800, color: "var(--dp)" } }, "🤰 Pregnancy Monitoring"),
+        React.createElement("p", { style: { fontSize: "var(--fs-md)", fontWeight: 800, color: "var(--dp)" } }, "Pregnancy Monitoring"),
         React.createElement(ToggleSwitch, {
           isOn: uiState.showPregnancyMonitor,
           onToggle: () => dispatchUi({ type: 'TOGGLE_CARD', card: 'showPregnancyMonitor', isVisible: false }),

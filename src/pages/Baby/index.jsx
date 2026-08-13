@@ -301,7 +301,7 @@ export default function Baby() {
 
       <div className="card-in card-in-1">
         <SectionTitle
-          title="Baby Tracker 👶"
+          title="Baby Tracker"
           subtitle={`Week ${babyWeeks}${babyDaysRemainder ? ` + ${babyDaysRemainder}d` : ''}`}
         />
       </div>
@@ -328,7 +328,7 @@ export default function Baby() {
       {/* Breastfeeding Section */}
       <WCard className="card-in card-in-3">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--sp-4)" }}>
-          <p style={{ fontSize: "var(--fs-lg)", fontWeight: 800, color: "var(--dp)", margin: 0 }}>Breastfeeding 🤱</p>
+          <p style={{ fontSize: "var(--fs-lg)", fontWeight: 800, color: "var(--dp)", margin: 0 }}>Breastfeeding</p>
           <button
             onClick={handleResetFeeds}
             className="btn-tap"
@@ -407,7 +407,7 @@ export default function Baby() {
 
       {/* Diaper Tracking Section */}
       <WCard className="card-in card-in-4">
-        <p style={{ fontSize: "var(--fs-lg)", fontWeight: 800, color: "var(--dp)", marginBottom: "var(--sp-4)" }}>Diapers 💧</p>
+        <p style={{ fontSize: "var(--fs-lg)", fontWeight: 800, color: "var(--dp)", marginBottom: "var(--sp-4)" }}>Diapers</p>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "var(--gap-sm)", marginBottom: "var(--sp-4)" }}>
           <div style={{ textAlign: "center", padding: "var(--sp-2)", background: "var(--bll)", borderRadius: "var(--r)" }}>
@@ -447,7 +447,7 @@ export default function Baby() {
 
       {/* Sleep Tracking Section */}
       <WCard className="card-in card-in-5">
-        <p style={{ fontSize: "var(--fs-lg)", fontWeight: 800, color: "var(--dp)", marginBottom: "var(--sp-4)" }}>Sleep 😴</p>
+        <p style={{ fontSize: "var(--fs-lg)", fontWeight: 800, color: "var(--dp)", marginBottom: "var(--sp-4)" }}>Sleep</p>
 
         {sleeping ? (
           <div style={{ textAlign: "center", padding: "var(--sp-4)", background: "var(--bll)", borderRadius: "var(--r)", marginBottom: "var(--sp-3)" }}>

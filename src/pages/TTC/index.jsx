@@ -910,17 +910,80 @@ export default function TTC() {
               ))}
             </WCard>
 
+            {/* ─── LOCAL MYTHS (UPDATED TO USE regions) ─── */}
             <WCard className="card-in card-in-3" style={{ background: "var(--sgl)", border: "1.5px solid var(--sgm)44" }}>
-              <p style={{ fontWeight: 800, color: "var(--sg)", marginBottom: "var(--sp-3)", fontSize: "var(--fs-md)" }}>{LOCAL_MYTHS.title}</p>
-              {LOCAL_MYTHS.items.map(([myth,status,fact],i) => (
-                <div key={i} className="reveal-in" style={{ padding: "var(--sp-3) 0", borderBottom: i < LOCAL_MYTHS.items.length - 1 ? "1px solid var(--border)" : "none", animationDelay: `${i * 0.06}s` }}>
-                  <div style={{ display: "flex", gap: "var(--gap-sm)", alignItems: "center", marginBottom: "var(--sp-1)" }}>
-                    <Tag label={status} bg={status==="FALSE" ? "var(--rdl)" : "var(--gdl)"} tc={status==="FALSE" ? "var(--rd)" : "var(--gd)"} />
-                    <p style={{ fontSize: "var(--fs-sm)", fontWeight: 700, color: "var(--dp)" }}>{myth}</p>
-                  </div>
-                  <p style={{ fontSize: "var(--fs-xs)", color: "var(--md)", lineHeight: 1.55 }}>{fact}</p>
-                </div>
-              ))}
+              <p style={{ fontWeight: 800, color: "var(--sg)", marginBottom: "var(--sp-3)", fontSize: "var(--fs-md)" }}>
+                {LOCAL_MYTHS.title}
+              </p>
+
+              {(() => {
+                // Get user's culture from context (already available via `culture`)
+                const userCulture = culture || 'Global';
+                
+                // Find matching region(s) - try exact match first
+                let matchedRegions = LOCAL_MYTHS.regions.filter(
+                  r => r.region === userCulture || r.country === userCulture
+                );
+                
+                // If no match, try to find by region (e.g., if culture is "Nigeria", match "West Africa")
+                if (matchedRegions.length === 0) {
+                  matchedRegions = LOCAL_MYTHS.regions.filter(r => 
+                    userCulture.includes(r.region) || r.region.includes(userCulture)
+                  );
+                }
+                
+                // If still no match, fall back to Global
+                if (matchedRegions.length === 0) {
+                  matchedRegions = LOCAL_MYTHS.regions.filter(r => r.region === 'Global');
+                }
+
+                // Flatten all items from matched regions
+                const mythItems = matchedRegions.flatMap(r => r.items);
+
+                // If no items found, show a message
+                if (mythItems.length === 0) {
+                  return (
+                    <p style={{ fontSize: "var(--fs-sm)", color: "var(--mt)", textAlign: "center", padding: "var(--sp-3)" }}>
+                      No fertility myths available for your region yet. Check back soon!
+                    </p>
+                  );
+                }
+
+                return mythItems.map(([myth, status, fact], i) => {
+                  // Determine color based on status
+                  let bgColor, textColor;
+                  if (status === "FALSE" || status === "UNSUPPORTED") {
+                    bgColor = "var(--rdl)";
+                    textColor = "var(--rd)";
+                  } else if (status === "EXAGGERATED") {
+                    bgColor = "var(--gdl)";
+                    textColor = "var(--gd)";
+                  } else if (status === "UNKNOWN" || status === "UNPROVEN") {
+                    bgColor = "var(--bll)";
+                    textColor = "var(--bl)";
+                  } else if (status === "NOT A BIOMEDICAL DIAGNOSIS") {
+                    bgColor = "var(--gdl)";
+                    textColor = "var(--gd)";
+                  } else {
+                    bgColor = "var(--warm)";
+                    textColor = "var(--mt)";
+                  }
+
+                  return (
+                    <div key={i} className="reveal-in" style={{ 
+                      padding: "var(--sp-3) 0", 
+                      borderBottom: i < mythItems.length - 1 ? "1px solid var(--border)" : "none",
+                      animationDelay: `${i * 0.06}s`
+                    }}>
+                      <div style={{ display: "flex", gap: "var(--gap-sm)", alignItems: "center", marginBottom: "var(--sp-1)", flexWrap: "wrap" }}>
+                        <Tag label={status} bg={bgColor} tc={textColor} />
+                        <p style={{ fontSize: "var(--fs-sm)", fontWeight: 700, color: "var(--dp)" }}>{myth}</p>
+                      </div>
+                      <p style={{ fontSize: "var(--fs-xs)", color: "var(--md)", lineHeight: 1.55 }}>{fact}</p>
+                    </div>
+                  );
+                });
+              })()}
             </WCard>
           </div>
         </div>

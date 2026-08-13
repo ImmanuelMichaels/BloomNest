@@ -583,7 +583,7 @@ export default function Nutrition() {
 
       <div className="card-in card-in-1">
         <SectionTitle 
-          title="🥗 Nutrition" 
+          title="Nutrition" 
           subtitle={journeyNutrition ? `${journeyNutrition.title}` : weekLabel} 
         />
       </div>

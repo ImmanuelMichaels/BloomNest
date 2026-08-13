@@ -64,6 +64,24 @@ function formatAppointmentDate(raw) {
 }
 
 /* ─────────────────────────────────────────────────────────────────
+   IVF MEDICATION ADHERENCE (reads the same storage keys that
+   IVFJourney.jsx's MedicationSection writes: 'ivf_medications' and
+   'ivf_taken_<ISO date>'. Keeping these two functions in lockstep
+   with IVFJourney.jsx's todayISO()/isMedActive() is what keeps the
+   numbers shown here identical to the Medications tab.)
+───────────────────────────────────────────────────────────────── */
+function getTodayISO() {
+  return new Date().toISOString().split('T')[0];
+}
+
+function isMedActiveForToday(med) {
+  const today = getTodayISO();
+  if (med.startDate && med.startDate > today) return false;
+  if (med.endDate && med.endDate < today) return false;
+  return true;
+}
+
+/* ─────────────────────────────────────────────────────────────────
    USER CONFIGURABLE TARGETS
 ───────────────────────────────────────────────────────────────── */
 const DEFAULT_TARGETS = {
@@ -232,7 +250,7 @@ function buildCycleStats(lastPeriodStart, cycleLength, bbtEntry) {
     return {
       cycleDay: null, ovulationIn: null, fertileStart: null, fertileEnd: null,
       bbt: bbtEntry, cycleLength: cycleLen, inFertileWindow: false, phase: 'unknown',
-      tip: '🌸 Log your last period start date in Cycle Tracker to get personalised daily tips.',
+      tip: 'Log your last period start date in Cycle Tracker to get personalised daily tips.',
     };
   }
 
@@ -404,7 +422,10 @@ function WeightUpdateModal({ isOpen, onClose, currentWeight, onSave, accent }) {
   );
 }
 
-function TargetsSettingsModal({ isOpen, onClose, targets, onSave, accent }) {
+/* journeyType is required so we can hide sliders that don't apply to
+   the current journey (e.g. "Baby Kicks" outside pregnancy) instead
+   of showing a control that saves a number nothing ever reads. */
+function TargetsSettingsModal({ isOpen, onClose, targets, onSave, accent, journeyType }) {
   const [localTargets, setLocalTargets] = useState(targets);
 
   useEffect(() => {
@@ -435,14 +456,16 @@ function TargetsSettingsModal({ isOpen, onClose, targets, onSave, accent }) {
             formatValue={(v) => `${v} cups`}
           />
 
-          <RangeSlider
-            label="Daily Baby Kicks Goal"
-            value={localTargets.KICKS}
-            onChange={(v) => setLocalTargets({ ...localTargets, KICKS: v })}
-            min={0} max={50} step={1}
-            accent={accent}
-            formatValue={(v) => `${v}`}
-          />
+          {journeyType === 'pregnant' && (
+            <RangeSlider
+              label="Daily Baby Kicks Goal"
+              value={localTargets.KICKS}
+              onChange={(v) => setLocalTargets({ ...localTargets, KICKS: v })}
+              min={0} max={50} step={1}
+              accent={accent}
+              formatValue={(v) => `${v}`}
+            />
+          )}
 
           <RangeSlider
             label="Daily Steps Goal"
@@ -461,6 +484,13 @@ function TargetsSettingsModal({ isOpen, onClose, targets, onSave, accent }) {
             accent={accent}
             formatValue={(v) => `${v}h`}
           />
+
+          {journeyType === 'ivf' && (
+            <p style={{ fontSize: 'var(--fs-xs)', color: 'var(--mt)', margin: 0 }}>
+              Medication doses are set per-prescription in the Medications tab, not here — your
+              adherence is tracked automatically against whatever you've added there.
+            </p>
+          )}
         </div>
         <div className="modal-footer">
           <button className="modal-cancel-btn btn-tap" onClick={onClose}>Cancel</button>
@@ -513,6 +543,16 @@ export default function Home({ setTab }) {
   const [newTaskInput, setNewTaskInput] = useState('');
   const [showAddTask, setShowAddTask] = useState(false);
   const [showAllApt, setShowAllApt] = useState(false);
+
+  // IVF medication adherence — mirrors IVFJourney.jsx's MedicationSection
+  // math exactly (same storage keys, same isMedActive/todayISO rules) so
+  // the numbers shown on Home never disagree with the Medications tab.
+  const [ivfMedications, setIvfMedications] = useState(() =>
+    lsGet('ivf_medications', [])
+  );
+  const [ivfTakenLog, setIvfTakenLog] = useState(() =>
+    lsGet(`ivf_taken_${getTodayISO()}`, {})
+  );
 
   const [tipDismissed, setTipDismissed] = useState(() => {
     const saved = lsGet('tipDismissedDate', null);
@@ -600,10 +640,13 @@ export default function Home({ setTab }) {
         targetWeight: goals.targetWeight || null,
         prePregnancyWeight: goals.prePregnancyWeight || null,
       });
+
+      setIvfMedications(lsGet('ivf_medications', []));
+      setIvfTakenLog(lsGet(`ivf_taken_${getTodayISO()}`, {}));
     };
 
     loadData();
-    const events = ['vitalsUpdated', 'hydrationUpdated', 'kicksUpdated', 'stepsUpdated', 'weightGoalsUpdated', 'sleepUpdated'];
+    const events = ['vitalsUpdated', 'hydrationUpdated', 'kicksUpdated', 'stepsUpdated', 'weightGoalsUpdated', 'sleepUpdated', 'medsUpdated'];
     events.forEach(e => window.addEventListener(e, loadData));
     return () => events.forEach(e => window.removeEventListener(e, loadData));
   }, []);
@@ -645,6 +688,25 @@ export default function Home({ setTab }) {
     const diffDays = Math.ceil((d - now) / (1000 * 60 * 60 * 24));
     return { ...next, diffDays };
   }, [appointments]);
+
+  // IVF medication adherence for today — same shape as IVFJourney.jsx's
+  // MedicationSection (activeMeds -> todayTotal/todayTaken -> pct).
+  const ivfActiveMeds = useMemo(
+    () => ivfMedications.filter(isMedActiveForToday),
+    [ivfMedications]
+  );
+  const ivfMedsTotal = useMemo(
+    () => ivfActiveMeds.reduce((acc, m) => acc + (m.times?.length || 1), 0),
+    [ivfActiveMeds]
+  );
+  const ivfMedsTaken = useMemo(
+    () => ivfActiveMeds.reduce((acc, m) => {
+      const times = m.times?.length ? m.times : ['Morning'];
+      return acc + times.filter(t => ivfTakenLog[`${m.id}_${t}`]).length;
+    }, 0),
+    [ivfActiveMeds, ivfTakenLog]
+  );
+  const ivfMedsPct = ivfMedsTotal > 0 ? Math.round((ivfMedsTaken / ivfMedsTotal) * 100) : 0;
 
   // Callbacks
   const updateTargets = useCallback((newTargets) => {
@@ -862,6 +924,7 @@ export default function Home({ setTab }) {
         targets={targets}
         onSave={updateTargets}
         accent={meta.accent}
+        journeyType={journeyType}
       />
 
       <div className="journey-container">
@@ -1235,6 +1298,38 @@ export default function Home({ setTab }) {
                 </div>
               </div>
             </div>
+
+            {/* Medications (IVF only) — derived from actual prescribed meds
+                in localStorage, not a user-set target, since adherence is
+                a ratio of doses-taken/doses-scheduled, not a raw number. */}
+            {journeyType === 'ivf' && (
+              <div className="hm-tracker-row">
+                <div className="hm-tracker-left">
+                  <span className="hm-tracker-icon">💉</span>
+                  <div>
+                    <p className="hm-tracker-label">Medications</p>
+                    <p className="hm-tracker-meta">
+                      {ivfMedsTotal > 0 ? `${ivfMedsTaken}/${ivfMedsTotal} doses taken` : 'No medications logged'}
+                    </p>
+                  </div>
+                </div>
+                <div className="hm-tracker-actions" style={{ display: 'flex', alignItems: 'center', gap: 'var(--gap-sm)' }}>
+                  <button
+                    onClick={() => setTab('medications')}
+                    className="btn-tap"
+                    style={{ background: meta.accent, color: '#fff', border: 'none', borderRadius: 20, padding: '4px 12px', cursor: 'pointer', fontSize: 'var(--fs-2xs)' }}
+                  >
+                    {ivfMedsTotal > 0 ? 'Manage' : 'Add'}
+                  </button>
+                  <div className="hm-tracker-right">
+                    <div className="hm-tracker-bar-bg">
+                      <div className="hm-tracker-bar-fill" style={{ width: `${ivfMedsPct}%`, background: meta.accent }} />
+                    </div>
+                    <span className="hm-tracker-pct" style={{ color: meta.accent }}>{ivfMedsPct}%</span>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Sleep */}
             <div className="hm-tracker-row">

@@ -33,16 +33,22 @@ const JOURNEY_LABELS = {
   menstrual: 'Menstrual Health',
 };
 
+// ── Updated PLAN_DISPLAY: FREE → TRIAL ────────────────────────────────────────
 const PLAN_DISPLAY = {
-  [PLAN_IDS.FREE]: {
-    label: 'Bloom Seed (Free)',
+  [PLAN_IDS.TRIAL]: {              // Changed from FREE
+    label: 'Trial Period',
     price: null,
-    desc:  'Free tier · 10 AI messages/day',
+    desc:  '14–30 day trial · Period tracking only · Limited features',
   },
   [PLAN_IDS.BLOOM_PLUS]: {
     label: 'Bloom+',
     price: '£6.99/mo',
-    desc:  'Unlimited AI · Priority support · Export health data',
+    desc:  'Unlimited AI · Full reproductive journey access · Priority support',
+  },
+  [PLAN_IDS.BLOOM_PLUS_ANNUAL]: {
+    label: 'Bloom+ Annual',
+    price: '£59.99/yr',
+    desc:  'Everything in Bloom+ · Save ~28% vs monthly',
   },
 };
 
@@ -55,33 +61,27 @@ const NOTIFICATION_ITEMS = [
 ];
 
 // ── Confirm Modal ─────────────────────────────────────────────────────────────
-// Renders into document.body via createPortal so it is never clipped or
-// repositioned by a transformed/animated ancestor (the root cause of the
-// modal appearing at the top of the page during tab transitions).
 function ConfirmModal({
   title,
   body,
   confirmLabel,
-  confirmVariant = 'danger',   // 'danger' | 'neutral'
+  confirmVariant = 'danger',
   onConfirm,
   onCancel,
   children,
 }) {
   const confirmRef = useRef(null);
 
-  // Auto-focus the confirm button
   useEffect(() => {
     confirmRef.current?.focus();
   }, []);
 
-  // Close on Escape
   useEffect(() => {
     const handler = (e) => { if (e.key === 'Escape') onCancel(); };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
   }, [onCancel]);
 
-  // Prevent body scroll while open
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = ''; };
@@ -515,12 +515,11 @@ export default function Profile() {
     authUser?.displayName?.charAt(0)?.toUpperCase() ||
     FALLBACK_INITIAL;
 
-  const currentPlan = PLAN_DISPLAY[subscriptionPlan] ?? {
-    label: subscriptionPlan ?? 'Unknown',
-    price: null,
-    desc:  '',
-  };
-  const isFreePlan = !subscriptionPlan || subscriptionPlan === PLAN_IDS.FREE;
+  // ── Updated: Changed FREE → TRIAL ──
+  const currentPlan = PLAN_DISPLAY[subscriptionPlan] ?? PLAN_DISPLAY[PLAN_IDS.TRIAL];
+  const isTrialPlan    = !subscriptionPlan || subscriptionPlan === PLAN_IDS.TRIAL;  // Changed from isFreePlan
+  const isPlusMonthly = subscriptionPlan === PLAN_IDS.BLOOM_PLUS;
+  const isTopTier     = subscriptionPlan === PLAN_IDS.BLOOM_PLUS_ANNUAL;
 
   // ── Render ──
   return (
@@ -740,7 +739,6 @@ export default function Profile() {
                 {item.desc}
               </p>
             </div>
-            {/* label passed so Toggle has an accessible aria-label */}
             <Toggle
               on={notifications[item.key]}
               onChange={() => handleToggleNotification(item.key)}
@@ -778,24 +776,30 @@ export default function Profile() {
               {currentPlan.desc}
             </p>
           </div>
-          {isFreePlan && (
+          {!isTopTier && (
             <Button variant="primary" onClick={() => setShowSubscriptionModal(true)}>
-              Upgrade
+              {isTrialPlan ? 'Start Trial → Upgrade' : 'Upgrade to Annual'}
             </Button>
           )}
         </div>
 
-        {isFreePlan && (
+        {!isTopTier && (
           <div style={{
             marginTop: 'var(--sp-3, 12px)',
             paddingTop: 'var(--sp-3, 12px)',
             borderTop: '1px solid var(--border, rgba(0,0,0,0.06))',
           }}>
             <PlanRow
-              icon="✨"
-              name={PLAN_DISPLAY[PLAN_IDS.BLOOM_PLUS].label}
-              price={PLAN_DISPLAY[PLAN_IDS.BLOOM_PLUS].price}
-              desc={PLAN_DISPLAY[PLAN_IDS.BLOOM_PLUS].desc}
+              icon={isTrialPlan ? '✨' : '🌟'}
+              name={isTrialPlan
+                ? PLAN_DISPLAY[PLAN_IDS.BLOOM_PLUS].label
+                : PLAN_DISPLAY[PLAN_IDS.BLOOM_PLUS_ANNUAL].label}
+              price={isTrialPlan
+                ? PLAN_DISPLAY[PLAN_IDS.BLOOM_PLUS].price
+                : PLAN_DISPLAY[PLAN_IDS.BLOOM_PLUS_ANNUAL].price}
+              desc={isTrialPlan
+                ? PLAN_DISPLAY[PLAN_IDS.BLOOM_PLUS].desc
+                : PLAN_DISPLAY[PLAN_IDS.BLOOM_PLUS_ANNUAL].desc}
             />
           </div>
         )}
@@ -913,6 +917,7 @@ export default function Profile() {
       {/* ── Subscription Modal ── */}
       {showSubscriptionModal && (
         <SubscriptionPlans
+          currentPlan={subscriptionPlan}
           onClose={() => setShowSubscriptionModal(false)}
           onUpgrade={(planId) => {
             updateSubscriptionPlan(planId);

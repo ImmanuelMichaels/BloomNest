@@ -35,15 +35,19 @@ export function AppProvider({ children }) {
   const [journeyType, setJourneyType] = useState(() => lsGet('userJourney', DEFAULT_JOURNEY));
   const [culture, setCulture] = useState(() => lsGet('userCulture', 'west_central_african'));
   const [dietaryPractices, setDietaryPractices] = useState(() => lsGet('dietaryPractices', []));
+  const [hasDietaryPractices, setHasDietaryPractices] = useState(() => lsGet('hasDietaryPractices', null));
+  const [religion, setReligion] = useState(() => lsGet('religion', null));
   const [subscriptionPlan, setSubscriptionPlan] = useState(() => lsGet('subscriptionPlan', PLAN_TYPES.FREE));
 
   // ── Pregnancy data ──────────────────────────────────────────────────────
   const [edd, setEdd] = useState(() => lsGet('pregnancyEdd', null));
+  const [babyNumber, setBabyNumber] = useState(() => lsGet('babyNumber', null));
   const [babyAgeDays, setBabyAgeDays] = useState(() => {
     const stored = lsGet('babyAgeDays', null);
     return stored !== null ? parseInt(stored, 10) : null;
   });
   const [babyBirthDate, setBabyBirthDate] = useState(() => lsGet('babyBirthDate', null));
+  const [feedingMethod, setFeedingMethod] = useState(() => lsGet('feedingMethod', null));
 
   // ── TTC data ─────────────────────────────────────────────────────────────
   const [cycleLength, setCycleLength] = useState(() => {
@@ -59,6 +63,14 @@ export function AppProvider({ children }) {
     const stored = lsGet('cycleDay', null);
     return stored !== null ? parseInt(stored, 10) : 1;
   });
+
+  // ── IVF data ─────────────────────────────────────────────────────────────
+  const [treatmentType, setTreatmentType] = useState(() => lsGet('treatmentType', null));
+  const [ivfCycleNumber, setIvfCycleNumber] = useState(() => lsGet('ivfCycleNumber', null));
+
+  // ── Menopause data ───────────────────────────────────────────────────────
+  const [menopauseStage, setMenopauseStage] = useState(() => lsGet('menopauseStage', null));
+  const [menopauseSymptoms, setMenopauseSymptoms] = useState(() => lsGet('menopauseSymptoms', []));
 
   // ── UI state ─────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState(() => lsGet('activeTab', 'home')); // ADD THIS
@@ -133,6 +145,14 @@ export function AppProvider({ children }) {
             if (profile.lastPeriodStart) setLastPeriodStart(profile.lastPeriodStart);
             if (profile.cycleDay) setCycleDay(profile.cycleDay);
             if (profile.dietaryPractices) setDietaryPractices(profile.dietaryPractices);
+            if (profile.hasDietaryPractices) setHasDietaryPractices(profile.hasDietaryPractices);
+            if (profile.religion) setReligion(profile.religion);
+            if (profile.babyNumber) setBabyNumber(profile.babyNumber);
+            if (profile.feedingMethod) setFeedingMethod(profile.feedingMethod);
+            if (profile.treatmentType) setTreatmentType(profile.treatmentType);
+            if (profile.ivfCycleNumber) setIvfCycleNumber(profile.ivfCycleNumber);
+            if (profile.menopauseStage) setMenopauseStage(profile.menopauseStage);
+            if (profile.menopauseSymptoms) setMenopauseSymptoms(profile.menopauseSymptoms);
           }
         } else {
           setUser(null);
@@ -172,12 +192,44 @@ export function AppProvider({ children }) {
   }, [dietaryPractices]);
 
   useEffect(() => {
+    if (hasDietaryPractices) lsSet('hasDietaryPractices', hasDietaryPractices);
+  }, [hasDietaryPractices]);
+
+  useEffect(() => {
+    if (religion) lsSet('religion', religion);
+  }, [religion]);
+
+  useEffect(() => {
     lsSet('subscriptionPlan', subscriptionPlan);
   }, [subscriptionPlan]);
 
   useEffect(() => {
     if (edd) lsSet('pregnancyEdd', edd);
   }, [edd]);
+
+  useEffect(() => {
+    if (babyNumber) lsSet('babyNumber', babyNumber);
+  }, [babyNumber]);
+
+  useEffect(() => {
+    if (feedingMethod) lsSet('feedingMethod', feedingMethod);
+  }, [feedingMethod]);
+
+  useEffect(() => {
+    if (treatmentType) lsSet('treatmentType', treatmentType);
+  }, [treatmentType]);
+
+  useEffect(() => {
+    if (ivfCycleNumber) lsSet('ivfCycleNumber', ivfCycleNumber);
+  }, [ivfCycleNumber]);
+
+  useEffect(() => {
+    if (menopauseStage) lsSet('menopauseStage', menopauseStage);
+  }, [menopauseStage]);
+
+  useEffect(() => {
+    lsSet('menopauseSymptoms', menopauseSymptoms);
+  }, [menopauseSymptoms]);
 
   useEffect(() => {
     if (babyAgeDays !== null) lsSet('babyAgeDays', babyAgeDays.toString());
@@ -290,6 +342,14 @@ export function AppProvider({ children }) {
       if (data.lastPeriodStart !== undefined) setLastPeriodStart(data.lastPeriodStart);
       if (data.cycleDay !== undefined) setCycleDay(data.cycleDay);
       if (data.dietaryPractices !== undefined) setDietaryPractices(data.dietaryPractices);
+      if (data.hasDietaryPractices !== undefined) setHasDietaryPractices(data.hasDietaryPractices);
+      if (data.religion !== undefined) setReligion(data.religion);
+      if (data.babyNumber !== undefined) setBabyNumber(data.babyNumber);
+      if (data.feedingMethod !== undefined) setFeedingMethod(data.feedingMethod);
+      if (data.treatmentType !== undefined) setTreatmentType(data.treatmentType);
+      if (data.ivfCycleNumber !== undefined) setIvfCycleNumber(data.ivfCycleNumber);
+      if (data.menopauseStage !== undefined) setMenopauseStage(data.menopauseStage);
+      if (data.menopauseSymptoms !== undefined) setMenopauseSymptoms(data.menopauseSymptoms);
       if (data.plan !== undefined) setSubscriptionPlan(data.plan);
 
       return true;
@@ -358,16 +418,24 @@ export function AppProvider({ children }) {
     setCulture,
     dietaryPractices,
     setDietaryPractices,
+    hasDietaryPractices,
+    setHasDietaryPractices,
+    religion,
+    setReligion,
     subscriptionPlan,
     setSubscriptionPlan,
 
     // Pregnancy data
     edd,
     setEdd,
+    babyNumber,
+    setBabyNumber,
     babyAgeDays,
     setBabyAgeDays,
     babyBirthDate,
     setBabyBirthDate,
+    feedingMethod,
+    setFeedingMethod,
 
     // TTC data
     cycleLength,
@@ -378,6 +446,18 @@ export function AppProvider({ children }) {
     setLastPeriodStart,
     cycleDay,
     setCycleDay,
+
+    // IVF data
+    treatmentType,
+    setTreatmentType,
+    ivfCycleNumber,
+    setIvfCycleNumber,
+
+    // Menopause data
+    menopauseStage,
+    setMenopauseStage,
+    menopauseSymptoms,
+    setMenopauseSymptoms,
 
     // Computed
     getCurrentWeek,
@@ -419,14 +499,22 @@ export function AppProvider({ children }) {
     journeyType,
     culture,
     dietaryPractices,
+    hasDietaryPractices,
+    religion,
     subscriptionPlan,
     edd,
+    babyNumber,
     babyAgeDays,
     babyBirthDate,
+    feedingMethod,
     cycleLength,
     periodLength,
     lastPeriodStart,
     cycleDay,
+    treatmentType,
+    ivfCycleNumber,
+    menopauseStage,
+    menopauseSymptoms,
     getCurrentWeek,
     getTrimester,
     getJourneyDisplay,

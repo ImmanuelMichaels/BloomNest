@@ -1,4 +1,3 @@
-
 export const JOURNEY_META = {
   pregnant: {
     accent:     '#d63a6e',
@@ -178,6 +177,16 @@ export const TTC_CONFIG = {
    the stage-specific copy (including embryo day and days to transfer)
    dynamically from the user's cycle start date and timeline state.
    No day numbers, no transfer dates, no embryo counts here.
+
+   NOTE: quickAction ids below MUST match the literal tab ids that
+   AppShell.jsx's renderPage() switch and BLOOM_KB.ivf.tabs recognize
+   ('medications', 'embryos', 'nutrition') — AppShell has no route for
+   prefixed variants like 'ivf-medications' / 'ivf-embryos', so using
+   anything else here silently no-ops the button (isTabAllowed()
+   rejects it). IVFJourney.jsx's renderContent() switch now has a
+   'nutrition' case — if AppShell.jsx keeps its own separate allow-list
+   of tab ids per journey type, add 'nutrition' there too or this
+   button will do nothing.
 ───────────────────────────────────────────────────────────────── */
 export const IVF_CONFIG = {
   greeting:  name => greet(name, '💛'),
@@ -213,8 +222,9 @@ export const IVF_CONFIG = {
   checklist: [],
 
   quickActions: [
-    { emoji: '💉', label: 'Medications', id: 'ivf-medications' },  // Fixed: unique id
-    { emoji: '🔬', label: 'Embryos',     id: 'ivf-embryos' },      // Fixed: unique id
+    { emoji: '💉', label: 'Medications', id: 'medications' },
+    { emoji: '🔬', label: 'Embryos',     id: 'embryos' },
+    { emoji: '🥗', label: 'Nutrition',   id: 'nutrition' },
     { emoji: '💗', label: 'Wellbeing',   id: 'mental' },
     { emoji: '🤖', label: 'Ask AI',      id: 'assistant' },
   ],

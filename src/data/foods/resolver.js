@@ -355,6 +355,31 @@ function isFoodAllowed(foodName, dietaryPractices) {
   return true;
 }
 
+/**
+ * Get traditional/cultural practice-style guidance entries for a journey.
+ * Used by Health.jsx's "Traditional Practices" panel.
+ *
+ * Returns items shaped like:
+ *   { name, safety: 'safe'|'caution'|'avoid', riskLevel, guidance, sourceIds }
+ */
+export function getTraditionalPractices(journeyType, culture = 'default') {
+  const foods = getCulturalFoods({ culture, journey: journeyType });
+
+  return foods
+    .map(food => {
+      const guidance = getGuidanceForFood(food.id, journeyType);
+      if (!guidance) return null;
+      return {
+        name: food.name,
+        safety: guidance.status,
+        riskLevel: guidance.riskLevel,
+        guidance: guidance.guidance,
+        sourceIds: guidance.sourceIds || [],
+      };
+    })
+    .filter(Boolean);
+}
+
 // ─── Re-export everything ────────────────────────────────────────────────────
 export * from './types';
 export * from './regions';

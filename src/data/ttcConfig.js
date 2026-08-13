@@ -86,16 +86,25 @@ export const FERTILITY_INSIGHT_TIPS = [
   { icon: "🩺", title: "When to see a doctor", body: "If no pregnancy after 12 months of trying (6 months if over 35). Your GP can arrange hormonal blood panel, HSG scan, and semen analysis." },
 ];
 
-// NOTE: these myths were sourced/verified for a Nigerian cultural context only.
-// Extending this to other cultures needs real fact-checked content per region —
-// flag which cultures you want covered and I'll research/verify rather than guess.
+// NOTE: these myths were sourced/verified for a Nigerian cultural context only,
+// filed under the "Global" region below since that's currently the only
+// fact-checked set. Extending this to other cultures/regions needs real
+// fact-checked content per region — flag which cultures you want covered and
+// I'll research/verify rather than guess. Each region entry needs a `region`
+// (and optionally `country`) key plus an `items` array of
+// [myth, status, fact] tuples, matching the shape TTC.jsx's Insights tab expects.
 export const LOCAL_MYTHS = {
-  title: "🇳🇬 Local Fertility Myths — Debunked",
-  items: [
-    ["Eating unripe pawpaw boosts fertility", "FALSE", "Contains papain — disrupts implantation. Avoid during conception attempts."],
-    ["Drinking Agbo increases chances", "UNKNOWN", "Most Agbo mixtures have unknown compositions and interactions. Avoid."],
-    ["You can't get pregnant while breastfeeding", "FALSE", "You can — ovulation can return before your first postpartum period."],
-    ["Legs up after sex for 30 minutes is necessary", "EXAGGERATED", "15 minutes resting is sufficient. Sperm reach the fallopian tube within 90 seconds."],
+  title: "Local Fertility Myths — Debunked",
+  regions: [
+    {
+      region: "Global",
+      items: [
+        ["Eating unripe pawpaw boosts fertility", "FALSE", "Contains papain — disrupts implantation. Avoid during conception attempts."],
+        ["Drinking Agbo increases chances", "UNKNOWN", "Most Agbo mixtures have unknown compositions and interactions. Avoid."],
+        ["You can't get pregnant while breastfeeding", "FALSE", "You can — ovulation can return before your first postpartum period."],
+        ["Legs up after sex for 30 minutes is necessary", "EXAGGERATED", "15 minutes resting is sufficient. Sperm reach the fallopian tube within 90 seconds."],
+      ],
+    },
   ],
 };
 
