@@ -18,7 +18,9 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 
 if (import.meta.env.DEV) {
-  self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+  self.FIREBASE_APPCHECK_EXECUTION_ENVIRONMENT_OPTIONS = {
+    debugToken: import.meta.env.VITE_FIREBASE_APPCHECK_DEBUG_TOKEN || true,
+  };
 }
 
 initializeAppCheck(app, {
@@ -32,3 +34,4 @@ const storage = getStorage(app);
 
 // Export everything including app
 export { auth, db, storage, app }; 
+
