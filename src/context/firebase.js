@@ -18,13 +18,12 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 
 if (import.meta.env.DEV) {
-  self.FIREBASE_APPCHECK_EXECUTION_ENVIRONMENT_OPTIONS = {
-    debugToken: import.meta.env.VITE_FIREBASE_APPCHECK_DEBUG_TOKEN || true,
-  };
+  self.FIREBASE_APPCHECK_DEBUG_TOKEN =
+    import.meta.env.VITE_FIREBASE_APPCHECK_DEBUG_TOKEN || true;
 }
 
 initializeAppCheck(app, {
-  provider: new ReCaptchaEnterpriseProvider("abc123-your-site-key"),
+  provider: new ReCaptchaEnterpriseProvider('6LcnMoQtAAAAACRRrOaEG6YqEeCJas5-Q86rHuJ5'),
   isTokenAutoRefreshEnabled: true,
 });
 

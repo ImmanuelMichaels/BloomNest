@@ -36,6 +36,11 @@ async function hasValidConsent(uid) {
   // 1. Firestore check (only possible if authenticated)
   if (uid) {
     try {
+      // Force a fresh ID token before hitting Firestore — the token attached
+      // to this listener is occasionally stale on first attach, causing a
+      // false permission-denied even for an already-authenticated user.
+      await auth.currentUser?.getIdToken(true);
+
       const consentRef = doc(db, 'users', uid, 'consent', 'record');
       const consentSnap = await getDoc(consentRef);
       if (consentSnap.exists()) {
