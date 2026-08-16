@@ -5,6 +5,37 @@ rules_version = '2';
 //    /databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin;
 service firebase.storage {
   match /b/{bucket}/o {
+
+    // Profile photos — Profile.jsx uploads to profileImages/{uid} via
+    // uploadBytes(storageRef, file) where storageRef = ref(storage,
+    // `profileImages/${user.uid}`). One object per user, no subpath.
+    match /profileImages/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/(jpeg|png|gif|webp)');
+    }
+
+    // Hospital/GP documents — HospitalDocuments.jsx uploads to
+    // hospitalDocuments/{uid}/{docId}_{filename}. This layer checks the
+    // DECLARED contentType and size only — it can't inspect actual file
+    // bytes, so a renamed .exe claiming image/jpeg still passes here. The
+    // authoritative check is functions/index.js's validateHospitalDocument,
+    // a Storage onFinalize trigger that reads real magic bytes post-upload
+    // and deletes anything that doesn't match what it claims to be.
+    match /hospitalDocuments/{userId}/{fileName} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('application/pdf|image/jpeg|image/png');
+      // No update — a changed document should be deleted and re-uploaded,
+      // not silently overwritten in place.
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Deny everything else
     match /{allPaths=**} {
       allow read, write: if false;
     }

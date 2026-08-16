@@ -1,0 +1,769 @@
+/* src/components/CravingChecker/CravingChecker.css */
+
+/* ============================================
+   Craving Checker - Main Container
+   ============================================ */
+
+.craving-checker-wrapper {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0;
+  height: 100%;
+  min-height: 0;
+  /* Ensure smooth scrolling */
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+.craving-checker {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+  animation: fadeUp 0.5s ease-out both;
+  /* Ensure content can grow and scroll */
+  min-height: 100%;
+}
+
+.craving-checker-card {
+  background: var(--bg-surface, #ffffff);
+  border-radius: 1.5rem;
+  padding: 2rem 1.75rem 2.5rem;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+  border: 1px solid var(--border-light, rgba(0, 0, 0, 0.06));
+  transition: box-shadow 0.2s ease;
+  /* Ensure card doesn't overflow */
+  overflow: visible;
+}
+
+.craving-checker-card:hover {
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+}
+
+/* ============================================
+   Title
+   ============================================ */
+
+.craving-checker-title {
+  font-size: 1.75rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 0 0 0.25rem 0;
+  color: var(--text-primary, #1a1a2e);
+}
+
+.craving-checker-subtitle {
+  font-size: 0.95rem;
+  color: var(--text-secondary, #6b6b7a);
+  margin: 0 0 1.5rem 0;
+}
+
+/* ============================================
+   Journey Badge - Automatic Journey Display
+   ============================================ */
+
+.craving-checker-journey-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--bg-accent, #f5f0ff);
+  padding: 0.4rem 1rem 0.4rem 1.2rem;
+  border-radius: 100px;
+  margin: 0.5rem 0 1.5rem 0;
+  font-size: 0.85rem;
+  border: 1px solid var(--border-accent, rgba(139, 92, 246, 0.15));
+}
+
+.craving-checker-journey-label {
+  color: var(--text-secondary, #6b6b7a);
+  font-weight: 400;
+}
+
+.craving-checker-journey-name {
+  font-weight: 600;
+  color: var(--accent-primary, #7c3aed);
+  text-transform: capitalize;
+}
+
+/* ============================================
+   Search Input
+   ============================================ */
+
+.craving-checker-search {
+  position: relative;
+  margin-bottom: 0.5rem;
+}
+
+.craving-checker-input {
+  width: 100%;
+  padding: 0.9rem 1.25rem;
+  font-size: 1rem;
+  border: 2px solid var(--border-input, #e2e8f0);
+  border-radius: 1rem;
+  background: var(--bg-input, #fafafa);
+  color: var(--text-primary, #1a1a2e);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  outline: none;
+  font-family: inherit;
+}
+
+.craving-checker-input:focus {
+  border-color: var(--accent-primary, #7c3aed);
+  box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.1);
+  background: var(--bg-surface, #ffffff);
+}
+
+.craving-checker-input::placeholder {
+  color: var(--text-placeholder, #a0a0b0);
+}
+
+.craving-checker-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ============================================
+   Suggestions Dropdown
+   ============================================ */
+
+.craving-checker-suggestions {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  right: 0;
+  background: var(--bg-surface, #ffffff);
+  border-radius: 1rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  border: 1px solid var(--border-light, rgba(0, 0, 0, 0.06));
+  list-style: none;
+  margin: 0;
+  padding: 0.5rem;
+  max-height: 280px;
+  overflow-y: auto;
+  z-index: 100;
+  animation: dropdownIn 0.2s ease-out both;
+}
+
+.craving-checker-suggestions li {
+  margin: 0;
+}
+
+.craving-checker-suggestions button {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 0.6rem 1rem;
+  background: none;
+  border: none;
+  border-radius: 0.6rem;
+  font-size: 0.95rem;
+  color: var(--text-primary, #1a1a2e);
+  cursor: pointer;
+  transition: background 0.15s ease;
+  text-align: left;
+  font-family: inherit;
+}
+
+.craving-checker-suggestions button:hover:not(:disabled),
+.craving-checker-suggestions button:focus:not(:disabled) {
+  background: var(--bg-hover, #f5f3ff);
+}
+
+.craving-checker-suggestions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.craving-checker-suggestion-country {
+  font-size: 0.75rem;
+  color: var(--text-secondary, #6b6b7a);
+  background: var(--bg-muted, #f1f1f4);
+  padding: 0.15rem 0.6rem;
+  border-radius: 100px;
+  flex-shrink: 0;
+  margin-left: 0.75rem;
+}
+
+/* ============================================
+   Selected Chips
+   ============================================ */
+
+.craving-checker-selected {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 0 1rem 0;
+}
+
+.craving-checker-selected-label {
+  font-size: 0.85rem;
+  color: var(--text-secondary, #6b6b7a);
+  margin-right: 0.25rem;
+}
+
+.choice-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 100px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  background: var(--bg-muted, #f1f1f4);
+  color: var(--text-primary, #1a1a2e);
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+}
+
+.choice-chip--active {
+  background: var(--accent-primary, #7c3aed);
+  color: #ffffff;
+  border-color: var(--accent-primary, #7c3aed);
+}
+
+.choice-chip-remove {
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0 0 0 0.25rem;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.15s ease;
+  font-family: inherit;
+}
+
+.choice-chip-remove:hover:not(:disabled) {
+  opacity: 1;
+}
+
+.choice-chip-remove:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.choice-chip--active .choice-chip-remove {
+  color: #ffffff;
+}
+
+/* ============================================
+   Submit Button
+   ============================================ */
+
+.craving-checker-submit {
+  width: 100%;
+  padding: 0.9rem 1.5rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 1rem;
+  background: var(--accent-primary, #7c3aed);
+  color: #ffffff;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+  margin-top: 1rem;
+  font-family: inherit;
+}
+
+.craving-checker-submit:hover:not(:disabled) {
+  background: var(--accent-hover, #6d28d9);
+  box-shadow: 0 4px 16px rgba(124, 58, 237, 0.3);
+}
+
+.craving-checker-submit:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.craving-checker-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ============================================
+   Unmatched Queries
+   ============================================ */
+
+.craving-checker-unmatched {
+  margin-top: 1.5rem;
+  padding: 1rem 1.5rem;
+  background: var(--bg-warning-light, #fef9e7);
+  border-radius: 1rem;
+  border-left: 4px solid var(--warning, #f59e0b);
+}
+
+.craving-checker-unmatched p {
+  margin: 0.25rem 0;
+  font-size: 0.92rem;
+  color: var(--text-secondary, #6b6b7a);
+}
+
+/* ============================================
+   Result Container
+   ============================================ */
+
+.craving-checker-result {
+  margin-top: 2rem;
+  padding: 1.75rem 1.75rem 2rem;
+  background: var(--bg-surface, #ffffff);
+  border-radius: 1.5rem;
+  border: 1px solid var(--border-light, rgba(0, 0, 0, 0.06));
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+  animation: fadeUp 0.4s ease-out both;
+  /* Ensure results are visible */
+  clear: both;
+  overflow: visible;
+}
+
+.craving-checker-result-title {
+  font-size: 1.35rem;
+  font-weight: 600;
+  margin: 0 0 0.15rem 0;
+  color: var(--text-primary, #1a1a2e);
+}
+
+.craving-checker-result-journey {
+  font-size: 0.85rem;
+  color: var(--text-secondary, #6b6b7a);
+  margin: 0 0 1rem 0;
+}
+
+/* ============================================
+   Overall Tier Badge
+   ============================================ */
+
+.craving-checker-tier {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1.25rem;
+  border-radius: 100px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  margin-bottom: 1rem;
+}
+
+.craving-checker-tier-icon {
+  font-size: 1.1rem;
+}
+
+/* Tier Colors */
+.tier-compatible {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.tier-caution {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.tier-avoid-prep {
+  background: #fde68a;
+  color: #78350f;
+}
+
+.tier-unknown {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+.tier-seek-guidance {
+  background: #fce4ec;
+  color: #9a1b3e;
+}
+
+/* ============================================
+   Combined Note
+   ============================================ */
+
+.craving-checker-combined-note {
+  font-size: 0.95rem;
+  color: var(--text-secondary, #6b6b7a);
+  margin: 0.5rem 0 1.25rem 0;
+  padding: 0.75rem 1rem;
+  background: var(--bg-muted, #f8f8fa);
+  border-radius: 0.75rem;
+}
+
+/* ============================================
+   Individual Meal Cards
+   ============================================ */
+
+.craving-checker-meal-card {
+  margin-top: 1.25rem;
+  padding: 1.25rem 1.25rem 1.5rem;
+  background: var(--bg-muted, #f8f8fa);
+  border-radius: 1rem;
+  border: 1px solid var(--border-light, rgba(0, 0, 0, 0.04));
+  transition: border-color 0.2s ease;
+}
+
+.craving-checker-meal-card:hover {
+  border-color: var(--border-hover, rgba(0, 0, 0, 0.08));
+}
+
+.craving-checker-meal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.craving-checker-meal-header h4 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 0;
+  color: var(--text-primary, #1a1a2e);
+}
+
+.craving-checker-tier-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.75rem;
+  border-radius: 100px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+/* ============================================
+   Meal Context & Notes
+   ============================================ */
+
+.craving-checker-context {
+  font-size: 0.92rem;
+  color: var(--text-secondary, #6b6b7a);
+  margin: 0.5rem 0 0.25rem 0;
+  font-style: italic;
+}
+
+.craving-checker-repro-note {
+  font-size: 0.92rem;
+  color: var(--text-secondary, #6b6b7a);
+  margin: 0.25rem 0 0.5rem 0;
+}
+
+/* ============================================
+   Considerations
+   ============================================ */
+
+.craving-checker-considerations {
+  margin-top: 0.75rem;
+}
+
+.craving-checker-considerations h5 {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin: 0 0 0.25rem 0;
+  color: var(--text-secondary, #6b6b7a);
+}
+
+.craving-checker-consideration-group {
+  margin: 0.25rem 0 0.5rem 0;
+  padding: 0.4rem 0.75rem;
+  border-radius: 0.5rem;
+  background: var(--bg-surface, #ffffff);
+}
+
+.craving-checker-consideration-group strong {
+  font-size: 0.8rem;
+  color: var(--text-secondary, #6b6b7a);
+  display: block;
+  margin-bottom: 0.1rem;
+}
+
+.craving-checker-consideration-group ul {
+  margin: 0.15rem 0 0 0;
+  padding-left: 1.25rem;
+  font-size: 0.88rem;
+  color: var(--text-primary, #1a1a2e);
+}
+
+.craving-checker-consideration-group ul li {
+  margin: 0.1rem 0;
+}
+
+/* ============================================
+   Alternatives
+   ============================================ */
+
+.craving-checker-alternatives {
+  margin-top: 0.75rem;
+}
+
+.craving-checker-alternatives h5 {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin: 0 0 0.15rem 0;
+  color: var(--text-secondary, #6b6b7a);
+}
+
+.craving-checker-alternatives ul {
+  margin: 0.15rem 0 0 0;
+  padding-left: 1.25rem;
+  font-size: 0.88rem;
+  color: var(--text-primary, #1a1a2e);
+}
+
+.craving-checker-alternatives ul li {
+  margin: 0.1rem 0;
+}
+
+/* ============================================
+   Details Toggle
+   ============================================ */
+
+.craving-checker-details-toggle {
+  background: none;
+  border: none;
+  color: var(--accent-primary, #7c3aed);
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 0.5rem 0 0 0;
+  cursor: pointer;
+  transition: color 0.15s ease;
+  font-family: inherit;
+  margin-top: 0.5rem;
+}
+
+.craving-checker-details-toggle:hover {
+  color: var(--accent-hover, #6d28d9);
+  text-decoration: underline;
+}
+
+/* ============================================
+   Expanded Details
+   ============================================ */
+
+.craving-checker-details {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-light, rgba(0, 0, 0, 0.06));
+}
+
+.craving-checker-details p {
+  font-size: 0.88rem;
+  color: var(--text-secondary, #6b6b7a);
+  margin: 0.25rem 0;
+}
+
+.craving-checker-details strong {
+  color: var(--text-primary, #1a1a2e);
+}
+
+/* ============================================
+   Disclaimer
+   ============================================ */
+
+.craving-checker-disclaimer {
+  font-size: 0.75rem;
+  color: var(--text-muted, #9999aa);
+  margin: 1.5rem 0 0 0;
+  padding: 0.75rem 1rem;
+  background: var(--bg-muted, #f8f8fa);
+  border-radius: 0.5rem;
+  text-align: center;
+  border: 1px solid var(--border-light, rgba(0, 0, 0, 0.04));
+}
+
+/* ============================================
+   Animations
+   ============================================ */
+
+@keyframes fadeUp {
+  0% {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes dropdownIn {
+  0% {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ============================================
+   Scrollbar Styling
+   ============================================ */
+
+.craving-checker-wrapper::-webkit-scrollbar {
+  width: 6px;
+}
+
+.craving-checker-wrapper::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.craving-checker-wrapper::-webkit-scrollbar-thumb {
+  background: var(--border-input, #d1d5db);
+  border-radius: 3px;
+}
+
+.craving-checker-wrapper::-webkit-scrollbar-thumb:hover {
+  background: var(--text-placeholder, #a0a0b0);
+}
+
+/* ============================================
+   Responsive
+   ============================================ */
+
+@media (max-width: 600px) {
+  .craving-checker {
+    padding: 1rem 0.75rem 3rem;
+  }
+
+  .craving-checker-card {
+    padding: 1.25rem 1rem 1.75rem;
+    border-radius: 1rem;
+  }
+
+  .craving-checker-title {
+    font-size: 1.4rem;
+  }
+
+  .craving-checker-subtitle {
+    font-size: 0.85rem;
+  }
+
+  .craving-checker-input {
+    padding: 0.75rem 1rem;
+    font-size: 0.95rem;
+  }
+
+  .craving-checker-suggestions {
+    max-height: 200px;
+  }
+
+  .craving-checker-suggestions button {
+    font-size: 0.88rem;
+    padding: 0.5rem 0.75rem;
+  }
+
+  .craving-checker-result {
+    padding: 1.25rem 1rem 1.5rem;
+  }
+
+  .craving-checker-meal-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .craving-checker-journey-badge {
+    font-size: 0.8rem;
+    padding: 0.3rem 0.75rem 0.3rem 1rem;
+  }
+
+  .craving-checker-submit {
+    font-size: 0.95rem;
+    padding: 0.75rem 1.25rem;
+  }
+
+  .craving-checker-wrapper::-webkit-scrollbar {
+    width: 4px;
+  }
+}
+
+/* ============================================
+   Dark Mode Support (if applicable)
+   ============================================ */
+
+@media (prefers-color-scheme: dark) {
+  .craving-checker-card {
+    background: var(--bg-surface-dark, #1e1e2e);
+    border-color: var(--border-dark, rgba(255, 255, 255, 0.06));
+  }
+
+  .craving-checker-input {
+    background: var(--bg-input-dark, #2a2a3a);
+    border-color: var(--border-dark, rgba(255, 255, 255, 0.08));
+    color: var(--text-primary-dark, #e8e8f0);
+  }
+
+  .craving-checker-input:focus {
+    border-color: var(--accent-primary, #8b5cf6);
+    background: var(--bg-surface-dark, #1e1e2e);
+  }
+
+  .craving-checker-suggestions {
+    background: var(--bg-surface-dark, #1e1e2e);
+    border-color: var(--border-dark, rgba(255, 255, 255, 0.06));
+  }
+
+  .craving-checker-suggestions button {
+    color: var(--text-primary-dark, #e8e8f0);
+  }
+
+  .craving-checker-suggestions button:hover:not(:disabled) {
+    background: var(--bg-hover-dark, #2d2d3d);
+  }
+
+  .craving-checker-suggestion-country {
+    background: var(--bg-muted-dark, #2a2a3a);
+    color: var(--text-secondary-dark, #a0a0b0);
+  }
+
+  .craving-checker-result {
+    background: var(--bg-surface-dark, #1e1e2e);
+    border-color: var(--border-dark, rgba(255, 255, 255, 0.06));
+  }
+
+  .craving-checker-meal-card {
+    background: var(--bg-muted-dark, #2a2a3a);
+  }
+
+  .craving-checker-journey-badge {
+    background: rgba(139, 92, 246, 0.15);
+    border-color: rgba(139, 92, 246, 0.2);
+  }
+
+  .craving-checker-combined-note {
+    background: var(--bg-muted-dark, #2a2a3a);
+  }
+
+  .craving-checker-disclaimer {
+    background: var(--bg-muted-dark, #2a2a3a);
+    color: var(--text-muted-dark, #77778a);
+  }
+
+  .craving-checker-unmatched {
+    background: rgba(245, 158, 11, 0.08);
+  }
+
+  .craving-checker-unmatched p {
+    color: var(--text-secondary-dark, #a0a0b0);
+  }
+
+  .choice-chip {
+    background: var(--bg-muted-dark, #2a2a3a);
+    color: var(--text-primary-dark, #e8e8f0);
+  }
+
+  .choice-chip--active {
+    background: var(--accent-primary, #8b5cf6);
+    color: #ffffff;
+  }
+
+  .craving-checker-consideration-group {
+    background: var(--bg-surface-dark, #1e1e2e);
+  }
+
+  .craving-checker-wrapper::-webkit-scrollbar-thumb {
+    background: var(--border-dark, rgba(255, 255, 255, 0.15));
+  }
+}

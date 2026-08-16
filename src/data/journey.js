@@ -7,7 +7,7 @@ export const JOURNEY_CONFIG = {
     id: 'pregnant',
     name: 'Pregnancy',
     description: 'Track your pregnancy journey week by week',
-    tabs: ["home", "kicks", "vitals", "nutrition", "health", "baby", "mental", "partner", "chat", "insights", "profile"],
+    tabs: ["home", "kicks", "vitals", "nutrition", "craving", "health", "baby", "mental", "partner", "chat", "insights", "documents", "profile"],
     pills: [
       { dot: "var(--t)", label: "Week 24 · 2nd Trimester", bg: "var(--gdl)" },
       { dot: "var(--sg)", label: "3/6 supplements ✓", bg: "var(--sgl)" },
@@ -29,7 +29,7 @@ export const JOURNEY_CONFIG = {
     id: 'conceive',
     name: 'Trying to Conceive',
     description: 'Track your fertility journey',
-    tabs: ["home", "ttc", "nutrition", "vitals", "health", "mental", "partner", "chat", "insights", "profile"],
+    tabs: ["home", "ttc", "nutrition", "craving", "vitals", "health", "mental", "partner", "chat", "insights", "documents", "profile"],
     pills: [
       { dot: "var(--lv)", label: "Cycle Day 14 · Ovulation", bg: "var(--lvl)" },
       { dot: "var(--sg)", label: "Folic acid ✓",             bg: "var(--sgl)" },
@@ -51,7 +51,7 @@ export const JOURNEY_CONFIG = {
     id: 'ivf',
     name: 'IVF & Fertility',
     description: 'IVF treatment support',
-    tabs: ["home", "treatment", "medications", "embryos", "scans", "nutrition", "vitals", "health", "mental", "partner", "insights", "profile", "chat"],
+    tabs: ["home", "treatment", "medications", "embryos", "scans", "nutrition", "craving", "vitals", "health", "mental", "partner", "insights", "documents", "profile", "chat"],
     pills: [
       { dot: "var(--lv)", label: "Cycle Day 14 · Stimulation", bg: "var(--lvl)" },
       { dot: "var(--sg)", label: "4/5 meds taken ✓",           bg: "var(--sgl)" },
@@ -73,7 +73,7 @@ export const JOURNEY_CONFIG = {
     id: 'mom',
     name: 'Postpartum & Nursing',
     description: 'Postpartum recovery and baby care',
-    tabs: ["home", "nursing", "baby", "nutrition", "vitals", "health", "mental", "chat", "insights", "profile"],
+    tabs: ["home", "nursing", "baby", "nutrition", "craving", "vitals", "health", "mental", "chat", "insights", "documents", "profile"],
     pills: [
       { dot: "var(--t)",  label: "Week 6 Postpartum",      bg: "var(--gdl)" },
       { dot: "var(--sg)", label: "Breastfeeding · Day 42", bg: "var(--sgl)" },
@@ -95,7 +95,7 @@ export const JOURNEY_CONFIG = {
     id: 'menstrual',
     name: 'Menstrual Health',
     description: 'Track your menstrual cycle',
-    tabs: ["home", "menstrual", "nutrition", "vitals", "health", "mental", "chat", "insights", "profile",],
+    tabs: ["home", "menstrual", "nutrition", "craving", "vitals", "health", "mental", "chat", "insights", "documents", "profile"],
     pills: [
       { dot: "var(--lv)", label: "Follicular Phase", bg: "var(--lvl)" },
       { dot: "var(--sg)", label: "Energy rising ☀️", bg: "var(--sgl)" },
@@ -117,7 +117,7 @@ export const JOURNEY_CONFIG = {
     id: 'menopause',
     name: 'Menopause Support',
     description: 'Navigate menopause with confidence',
-    tabs: ["home", "menopause", "nutrition", "vitals", "health", "mental", "chat", "insights", "profile"],
+    tabs: ["home", "menopause", "nutrition", "craving", "vitals", "health", "mental", "chat", "insights", "documents", "profile"],
     pills: [
       { dot: "var(--lv)", label: "Perimenopause",       bg: "var(--lvl)" },
       { dot: "var(--sg)", label: "3 hot flashes today", bg: "var(--sgl)" },

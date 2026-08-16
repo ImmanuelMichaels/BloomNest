@@ -15,19 +15,22 @@ export default function Splash() {
       className="fi"
       style={{
         position: 'fixed', inset: 0,
-        background: 'FEFEFE',
+        background: '#2B0F8C',
         display: 'flex', flexDirection: 'column', alignItems: 'center',
         justifyContent: 'center', zIndex: 9999, padding: 'var(--pad-x)',
         overflow: 'hidden',
       }}
     >
-      {/* Animated content wrapper */}
+      {/* Logo — settles in the vertical center, rising a little from below */}
       <div
         style={{
           position: 'absolute',
-          top: animate ? '30px' : '50%',
+          top: '50%',
           left: '50%',
-          transform: animate ? 'translate(-50%, 0)' : 'translate(-50%, -50%)',
+          transform: animate
+            ? 'translate(-50%, -50%)'
+            : 'translate(-50%, calc(-50% + 24px))',
+          opacity: animate ? 1 : 0,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -36,63 +39,60 @@ export default function Splash() {
           padding: '0 var(--pad-x)',
         }}
       >
-
-        {/* Brand name */}
         <div
           className="serif"
           style={{
             width: '250px',
-            marginBottom: animate ? 'var(--sp-0)' : 'var(--sp-1)',
             letterSpacing: -0.5,
-            transition: 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
           }}
         >
-          <img src="./logo.png" alt="logo" />
+          <img src="./logo.png" alt="Femin9 logo" style={{ width: '100%', display: 'block' }} />
         </div>
-
-
-        {/* Spinner - fades out as it moves up */}
-        <div
-          style={{
-            width: 'clamp(30px,7vw,40px)',
-            height: 'clamp(30px,7vw,40px)',
-            border: '2.5px solid rgba(255,255,255,0.15)',
-            borderTopColor: '#e8a0f0',
-            borderRadius: '50%',
-            animation: 'sp 0.8s linear infinite',
-            opacity: animate ? 0 : 1,
-            transition: 'opacity 0.4s ease',
-            pointerEvents: 'none',
-          }}
-        />
       </div>
 
-      {/* Feature chips - fade in after animation */}
+      {/* Footer branding — fixed at the bottom, fades in after the logo settles */}
       <div
         style={{
           position: 'absolute',
           bottom: 'clamp(32px,8vw,52px)',
+          left: 0,
+          right: 0,
           display: 'flex',
-          flexWrap: 'wrap',
-          justifyContent: 'center',
-          gap: 'var(--gap-sm)',
-          maxWidth: 'clamp(260px,65vw,340px)',
-          padding: '0 var(--pad-x)',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 6,
           opacity: animate ? 1 : 0,
-          transform: animate ? 'translateY(0)' : 'translateY(20px)',
-          transition: 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.3s',
+          transform: animate ? 'translateY(0)' : 'translateY(12px)',
+          transition: 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.35s',
         }}
       >
+        <span
+          style={{
+            color: 'rgba(255,255,255,0.85)',
+            fontSize: 13,
+            letterSpacing: 0.5,
+          }}
+        >
+          From
+        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <img
+            src="./arvenue-mark.png"
+            alt=""
+            style={{ width: 18, height: 18 }}
+          />
+          <span
+            style={{
+              color: '#FFFFFF',
+              fontSize: 15,
+              fontWeight: 700,
+              letterSpacing: 0.2,
+            }}
+          >
+            Arvenue Innovation
+          </span>
+        </div>
       </div>
-
-      {/* Add keyframes for spinner */}
-      <style>
-        {`
-          @keyframes sp {
-            to { transform: rotate(360deg); }
-          }
-        `}
-      </style>
     </div>
   );
 }

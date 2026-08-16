@@ -244,13 +244,18 @@ export default function Signup() {
 
       await updateProfile(user, { displayName: name.trim().split(' ')[0] });
 
-      // Create user doc — no journey data, onboarding will set it
+      // Create user doc — no journey data, onboarding will set it.
+      // NOTE: no `plan` / `subscriptionPlan` field here — firestore.rules
+      // blocks the client from writing those (billing/privilege fields),
+      // and would reject this entire setDoc if included. A missing plan
+      // already falls back to free/trial in AppContext.jsx / Profile.jsx.
+      // The real value gets stamped server-side once the Stripe webhook
+      // Function exists.
       await setDoc(doc(db, 'users', user.uid), {
         name:               name.trim(),
         email,
         createdAt:          new Date(),
         messageCount:       0,
-        plan:               'free',
         onboardingComplete: false,
       });
 
@@ -288,12 +293,13 @@ export default function Signup() {
       const userDocSnap = await getDoc(doc(db, 'users', user.uid));
 
       if (!userDocSnap.exists()) {
+        // Same note as the email-signup path above: no `plan` field here,
+        // firestore.rules blocks it and the whole write would be rejected.
         await setDoc(doc(db, 'users', user.uid), {
           name:               user.displayName || user.email.split('@')[0],
           email:              user.email,
           createdAt:          new Date(),
           messageCount:       0,
-          plan:               'free',
           onboardingComplete: false,
         });
 

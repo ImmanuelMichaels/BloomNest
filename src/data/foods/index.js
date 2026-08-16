@@ -8,6 +8,14 @@ export * from './sources';
 export * from './resolver';
 export * from './validation';
 
+// Cultural meal library + "What can I eat?" craving/compatibility feature.
+// Deliberately separate from the FOODS/HEALTH_GUIDANCE schema above —
+// see the header comment in culturalMealLibrary.js for why. Purely
+// additive: nothing here replaces or removes existing exports.
+export * from './culturalMealLibrary';
+export * from './mealMatcher';
+export * from './compatibilityEngine';
+
 // Re-export migration for use in app
 export { migrateCulturalFoods } from './migration';
 

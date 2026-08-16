@@ -1,7 +1,7 @@
 // src/context/AppContext.jsx
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { auth } from './firebase';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { initializeFoodDatabase } from '../data/foods';
 import { lsGet, lsSet } from '../utils/storage';
 import { getUserProfile, updateUserProfile, updateJourneyType } from '../services/userService';
@@ -10,6 +10,18 @@ import { getUserProfile, updateUserProfile, updateJourneyType } from '../service
 const JOURNEY_TYPES = ['pregnant', 'conceive', 'ivf', 'mom', 'menstrual', 'menopause'];
 const DEFAULT_JOURNEY = 'pregnant';
 const PLAN_TYPES = { FREE: 'free', PLUS: 'plus' };
+
+// Every localStorage key this context persists user-scoped data under.
+// Kept in one place so clearUserData() can't drift out of sync with the
+// lsSet() calls below as new fields get added.
+const PERSISTED_KEYS = [
+  'userName', 'userJourney', 'userCulture', 'dietaryPractices',
+  'hasDietaryPractices', 'religion', 'subscriptionPlan', 'pregnancyEdd',
+  'babyNumber', 'babyAgeDays', 'babyBirthDate', 'feedingMethod',
+  'cycleLength', 'periodLength', 'lastPeriodStart', 'cycleDay',
+  'treatmentType', 'ivfCycleNumber', 'menopauseStage', 'menopauseSymptoms',
+  'notificationsEnabled', 'activeTab', 'theme',
+];
 
 // ─── Context ─────────────────────────────────────────────────────────────────
 const AppContext = createContext(null);
@@ -399,6 +411,65 @@ export function AppProvider({ children }) {
     setShowSOS(false);
   }, []);
 
+  // ─── Sign out / account cleanup ────────────────────────────────────────────
+  // Profile.jsx (and anywhere else that signs a user out) relies on these
+  // two being present on context. Previously they were destructured from
+  // useApp() but never defined here, so calling clearUserData() threw and
+  // silently aborted sign-out before auth.signOut()/navigate() ran.
+
+  // Resets every piece of user-scoped state back to its default and clears
+  // the matching localStorage keys, so a fresh sign-in (or a different
+  // account signing in on the same device) never inherits stale data via
+  // lsGet()'s fallback defaults.
+  const clearUserData = useCallback(() => {
+    setUserName('');
+    setJourneyType(DEFAULT_JOURNEY);
+    setCulture('west_central_african');
+    setDietaryPractices([]);
+    setHasDietaryPractices(null);
+    setReligion(null);
+    setSubscriptionPlan(PLAN_TYPES.FREE);
+
+    setEdd(null);
+    setBabyNumber(null);
+    setBabyAgeDays(null);
+    setBabyBirthDate(null);
+    setFeedingMethod(null);
+
+    setCycleLength(28);
+    setPeriodLength(5);
+    setLastPeriodStart(null);
+    setCycleDay(1);
+
+    setTreatmentType(null);
+    setIvfCycleNumber(null);
+
+    setMenopauseStage(null);
+    setMenopauseSymptoms([]);
+
+    setActiveTab('home');
+    setShowSOS(false);
+    setNotificationsEnabled(true);
+
+    setError(null);
+
+    PERSISTED_KEYS.forEach((key) => {
+      try {
+        localStorage.removeItem(key);
+      } catch (err) {
+        console.warn(`Failed to clear localStorage key "${key}":`, err);
+      }
+    });
+  }, []);
+
+  // Single entry point for signing out: clears local/session state first,
+  // then signs out of Firebase. Callers should still navigate to /login
+  // themselves afterward (this only owns auth + local state, not routing).
+  const logout = useCallback(async () => {
+    clearUserData();
+    await signOut(auth);
+  }, [clearUserData]);
+
   // ─── Context value ────────────────────────────────────────────────────────
 
   const value = useMemo(() => ({
@@ -486,6 +557,10 @@ export function AppProvider({ children }) {
     updateProfile,
     switchJourney,
 
+    // Sign out / account cleanup
+    clearUserData,
+    logout,
+
     // Constants
     JOURNEY_TYPES,
     PLAN_TYPES,
@@ -532,6 +607,8 @@ export function AppProvider({ children }) {
     notificationsEnabled,
     updateProfile,
     switchJourney,
+    clearUserData,
+    logout,
   ]);
 
   return (

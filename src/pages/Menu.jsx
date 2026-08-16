@@ -33,6 +33,10 @@ const TAB_META = {
   menstrual:  { label: 'Cycle Tracker',   desc: 'Period & symptom log',      emoji: '🌸', bg: '#FCE7F3', color: '#DB2777', category: 'health'     },
   body:       { label: 'Weight Log',      desc: 'Track your weight',         emoji: '⚖️', bg: '#D1FAE5', color: '#059669', category: 'wellness'   },
   assistant:  { label: 'AI Assistant',    desc: 'Your health assistant',     emoji: '🤖', bg: '#DBEAFE', color: '#2563EB', category: 'support'    },
+  // NEW: Craving Checker
+  craving:    { label: 'Craving Checker', desc: 'Check meal compatibility',  emoji: '🍽️', bg: '#FEF3C7', color: '#D97706', category: 'wellness'   },
+  // NEW: GP & Hospital Documents
+  documents:  { label: 'GP & Hospital Docs', desc: 'Store letters & scans', emoji: '📄', bg: '#E0E7FF', color: '#4338CA', category: 'health'      },
 };
 
 // ── Category display config ──────────────────────────────────────────────────

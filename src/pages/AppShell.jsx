@@ -35,6 +35,14 @@ const Insights    = lazy(() => import('./Insights'));
 const Profile     = lazy(() => import('./Profile'));
 const EPDSQuestionnaire = lazy(() => import('../components/EPDSQuestionnaire'));
 
+// ── Craving Checker ──────────────────────────────────────────────────────────
+// Import the CravingChecker component - this is the updated version that 
+// automatically matches the user's journey without any dropdown
+const CravingChecker = lazy(() => import('../components/CravingChecker/CravingChecker'));
+
+// ── GP & Hospital Documents ──────────────────────────────────────────────────
+const HospitalDocuments = lazy(() => import('../components/HospitalDocuments/HospitalDocuments'));
+
 // Placeholder for unfinished screens
 function ComingSoon({ name }) {
   return (
@@ -72,8 +80,8 @@ const JOURNEY_KEY_MAP = {
 const BASE_TABS = new Set([
   'home', 'menu', 'settings', 'insights', 'profile', 
   'chat', 'assistant', 'vitals', 'calendar', 'nutrition', 
-  'health', 'mental', 'safety', 'body'
-]); 
+  'health', 'mental', 'safety', 'body', 'craving', 'documents'
+]);
 
 // Journey-specific blocked tabs
 const getBlockedTabsForJourney = (journeyType) => {
@@ -82,7 +90,6 @@ const getBlockedTabsForJourney = (journeyType) => {
       return new Set([
         'baby', 'nursing', 'kicks', 'ttc', 'pregnancy', 
         'menstrual',
-        // 'partner' removed — IVF now has Partner tab (sperm health, SA decoder, ICSI)
       ]);
     
     case 'mom':
@@ -95,14 +102,12 @@ const getBlockedTabsForJourney = (journeyType) => {
       return new Set([
         'nursing', 'ttc', 'ivf', 'treatment', 'medications', 
         'scans', 'embryos', 'menstrual', 'menopause',
-        // partner is allowed for pregnant — shows partner support content
       ]);
     
     case 'conceive':
       return new Set([
         'baby', 'nursing', 'kicks', 'ivf', 'treatment', 
         'medications', 'scans', 'embryos', 'menopause', 'pregnancy',
-        // partner is allowed for conceive — shows male fertility content
       ]);
     
     case 'menopause':
@@ -144,7 +149,6 @@ export default function AppShell() {
     user,
   } = useApp();
 
-  // Firebase auth uid — AppContext exposes the `user` object, not a bare `userId`.
   const userId = user?.uid;
 
   const [showEPDS, setShowEPDS] = useState(false);
@@ -308,6 +312,16 @@ export default function AppShell() {
 
       case 'menopause': return journeyType === 'menopause' ? <Menopause /> : <Home setTab={handleSetTab} onUpgrade={handleUpgrade} />;
 
+      // ── Craving Checker ──────────────────────────────────────────────────
+      // Available to ALL journeys. The CravingChecker component automatically
+      // detects the user's journey from useApp() context and applies the
+      // appropriate compatibility rules without any dropdown.
+      case 'craving':   return <CravingChecker />;
+
+      // ── GP & Hospital Documents ────────────────────────────────────────
+      // Available to ALL journeys — same as craving above.
+      case 'documents': return <HospitalDocuments />;
+
       // Coming soon
       case 'pregnancy': return <ComingSoon name="Pregnancy Tracker" />;
       case 'menstrual': return <ComingSoon name="Menstrual Tracker" />;
@@ -380,7 +394,7 @@ export default function AppShell() {
         <div
           className="scroll-area fu"
           key={tab}
-          style={tab === 'chat' || tab === 'assistant'
+          style={tab === 'chat' || tab === 'assistant' || tab === 'craving'
             ? { display: 'flex', flexDirection: 'column', overflow: 'hidden' }
             : {}}
         >

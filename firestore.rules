@@ -8,7 +8,27 @@ service cloud.firestore {
     // parent doc's rule automatically, so this needs its own {document=**}
     // match just like notifications/journeys below.
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      // Billing/privilege fields. The client may NEVER set or change these —
+      // only a trusted backend (Cloud Function via the Admin SDK, which
+      // bypasses these rules entirely) may write them. Until the Stripe
+      // webhook Function exists, these fields simply stay unset on new
+      // accounts — the app already treats a missing plan/subscriptionPlan
+      // as free/trial by default (see AppContext.jsx, Profile.jsx), so this
+      // is a safe no-op today and becomes load-bearing the moment the
+      // webhook Function starts writing to it.
+      allow create: if request.auth != null
+        && request.auth.uid == userId
+        && !request.resource.data.keys().hasAny(['plan', 'subscriptionPlan', 'role', 'isAdmin']);
+
+      allow read: if request.auth != null && request.auth.uid == userId;
+
+      allow update: if request.auth != null
+        && request.auth.uid == userId
+        && !request.resource.data.diff(resource.data).affectedKeys()
+              .hasAny(['plan', 'subscriptionPlan', 'role', 'isAdmin']);
+
+      allow delete: if request.auth != null && request.auth.uid == userId;
     }
     match /users/{userId}/{document=**} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
@@ -22,6 +42,31 @@ service cloud.firestore {
     // Health journey data scoped to the user
     match /journeys/{userId}/{document=**} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // AI chat log. NOT nested under users/{uid} — chatService.js stores
+    // these as flat docs in a top-level `conversations` collection with a
+    // `userId` field, queried via where('userId', '==', uid). That means
+    // the ownership check has to be a per-document field match rather than
+    // the doc-ID match used above. Firestore rejects any query (list) that
+    // could return a document failing this check, so a client that tries
+    // to omit the userId filter gets denied outright rather than silently
+    // seeing only some documents — this is safe by default as written.
+    match /conversations/{messageId} {
+      allow read: if request.auth != null
+        && request.auth.uid == resource.data.userId;
+
+      allow create: if request.auth != null
+        && request.auth.uid == request.resource.data.userId
+        && request.resource.data.role in ['user', 'assistant']
+        && request.resource.data.content is string
+        && request.resource.data.content.size() < 5000;
+
+      // No update — chat messages are an append-only log, never edited.
+      // Delete IS allowed: Consent.jsx tells users "you can delete chat
+      // history at any time", so the rule has to make that true.
+      allow delete: if request.auth != null
+        && request.auth.uid == resource.data.userId;
     }
 
     // Deny everything else

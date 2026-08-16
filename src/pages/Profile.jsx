@@ -249,7 +249,6 @@ export default function Profile() {
     setSubscriptionPlan,
     notificationsEnabled,
     setNotificationsEnabled,
-    clearUserData,
     logout,
     userId,
     updateUserName,
@@ -454,11 +453,16 @@ export default function Profile() {
   };
 
   // ── Sign Out ──
+  // Uses the context's logout(), which clears local/session state and calls
+  // Firebase's signOut() internally. Previously this called an undefined
+  // clearUserData() outside a try/catch, which threw and silently aborted
+  // sign-out before auth.signOut()/navigate() ever ran.
   const confirmSignOut = async () => {
     setModal(null);
-    clearUserData();
     try {
-      await auth.signOut();
+      await logout();
+    } catch (err) {
+      console.error('Sign out error:', err);
     } finally {
       navigate('/login', { replace: true });
     }
@@ -488,7 +492,7 @@ export default function Profile() {
         await reauthenticateWithPopup(user, provider);
       }
 
-      clearUserData();
+      await logout();
       await deleteUser(user);
       navigate('/login', { replace: true });
     } catch (err) {
